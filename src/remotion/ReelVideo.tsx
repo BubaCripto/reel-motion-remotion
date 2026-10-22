@@ -14,7 +14,8 @@ import {
   HazardWarningScene,
   HourglassScene,
   SpeedGaugeScene,
-  NeuralBrainScene
+  NeuralBrainScene,
+  AnalogTextureOverlay
 } from './motion';
 import {loadFont as loadAnton} from '@remotion/google-fonts/Anton';
 import {loadFont as loadPlayfair} from '@remotion/google-fonts/PlayfairDisplay';
@@ -98,11 +99,21 @@ const Caption:React.FC<{cue:Cue;p:ReelProject;index:number;frames:number}>=({cue
  })}</div></div></AbsoluteFill>;
 };
 
-const OverlayView:React.FC<{layer:Overlay}>=({layer:l})=>{
+const OverlayView:React.FC<{layer:Overlay;cues?:Cue[]}>=({layer:l,cues})=>{
  const frame=useCurrentFrame(),{fps}=useVideoConfig(),now=l.start+frame/fps;
  const x=animatedValue(l.keyframes,now,'x',l.x),y=animatedValue(l.keyframes,now,'y',l.y),scale=animatedValue(l.keyframes,now,'scale',l.scale),rotate=animatedValue(l.keyframes,now,'rotate',l.rotation),opacity=animatedValue(l.keyframes,now,'opacity',l.opacity);
  const intro=spring({frame,fps,config:{damping:14,stiffness:115}}),outro=interpolate(frame,[Math.max(0,(l.end-l.start)*fps-7),Math.max(1,(l.end-l.start)*fps)],[1,0],{extrapolateLeft:'clamp',extrapolateRight:'clamp'});
- if(l.kind==='audio')return l.src?<Audio src={media(l.src)} volume={clamp(l.volume??1,0,2)}/>:null;
+ if(l.kind==='audio'){
+  if(!l.src)return null;
+  const baseVol=clamp(l.volume??1,0,2);
+  let finalVol=baseVol;
+  if(l.ducking!==false&&cues?.length){
+   const isSpeaking=cues.some(c=>now>=(c.start-0.08)&&now<=(c.end+0.12));
+   const duckRatio=l.duckingAmount??0.28;
+   finalVol=isSpeaking?baseVol*duckRatio:baseVol;
+  }
+  return <Audio src={media(l.src)} volume={finalVol}/>;
+ }
  if(l.kind==='effect'&&l.type==='flash')return <AbsoluteFill style={{background:l.color??'#ffffff',opacity:opacity*(1-intro)*outro,pointerEvents:'none'}}/>;
  if(l.kind==='effect'&&l.type==='vignette')return <AbsoluteFill style={{boxShadow:'inset 0 0 400px 180px #000b',opacity:opacity*outro,pointerEvents:'none'}}/>;
  if(l.kind==='effect'&&l.type==='grain')return <AbsoluteFill style={{backgroundImage:'repeating-radial-gradient(circle,#fff3 0px,transparent 1px,#0002 2px)',backgroundSize:'4px 4px',opacity:.2*opacity,pointerEvents:'none'}}/>;
@@ -210,7 +221,7 @@ export const ReelVideo:React.FC<{project:ReelProject}>=({project:p})=>{
  const frame=useCurrentFrame();
  const legacy=!p.clips?.length&&p.videoSrc;
  const layers=[...(p.overlays??[])].sort((a,b)=>a.track-b.track),isBroll=(l:Overlay)=>l.kind==='video'||l.mediaRole==='broll';
- const renderLayer=(layer:Overlay)=><Sequence key={layer.id} premountFor={p.fps} from={Math.max(0,Math.round(layer.start*p.fps))} durationInFrames={Math.max(1,Math.round((layer.end-layer.start)*p.fps))}><OverlayView layer={layer}/></Sequence>;
+ const renderLayer=(layer:Overlay)=><Sequence key={layer.id} premountFor={p.fps} from={Math.max(0,Math.round(layer.start*p.fps))} durationInFrames={Math.max(1,Math.round((layer.end-layer.start)*p.fps))}><OverlayView layer={layer} cues={p.cues}/></Sequence>;
 
  const now=frame/p.fps;
  const activeShake=layers.find(l=>l.kind==='motion'&&(l.motionType==='camera-shake'||l.motionProps?.cameraShake)&&now>=l.start&&now<=l.end);
@@ -226,6 +237,9 @@ export const ReelVideo:React.FC<{project:ReelProject}>=({project:p})=>{
   {layers.filter(isBroll).map(renderLayer)}
   {p.cues.map((c,i)=><Sequence key={c.id} from={Math.max(0,Math.round(c.start*p.fps))} durationInFrames={Math.max(1,Math.round((c.end-c.start)*p.fps))}><Caption cue={c} p={p} index={i} frames={Math.max(1,Math.round((c.end-c.start)*p.fps))}/></Sequence>)}
   {layers.filter(l=>!isBroll(l)).map(renderLayer)}
+  {p.colorGrade && p.colorGrade !== 'none' && (
+   <AnalogTextureOverlay colorGrade={p.colorGrade} grain={false} vignette={false}/>
+  )}
   </AbsoluteFill>
  );
 

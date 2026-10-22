@@ -7,11 +7,13 @@ type Props = {
   project: ReelProject;
   renderJob: string;
   batchFiles: string[];
+  storageInfo?: { renderCount: number; renderMb: number } | null;
   onSave: () => void;
   onOpenProject: (p: ReelProject) => void;
   onDeleteProject: (id: string) => void;
   onPickJson: () => void;
   onBatchRender: () => void;
+  onCleanStorage?: () => void;
 };
 
 export const LibraryPanel: React.FC<Props> = ({
@@ -19,11 +21,13 @@ export const LibraryPanel: React.FC<Props> = ({
   project,
   renderJob,
   batchFiles,
+  storageInfo,
   onSave,
   onOpenProject,
   onDeleteProject,
   onPickJson,
-  onBatchRender
+  onBatchRender,
+  onCleanStorage
 }) => {
   return (
     <div className="fields">
@@ -54,9 +58,25 @@ export const LibraryPanel: React.FC<Props> = ({
           MP4 finalizado #{i + 1}
         </a>
       ))}
+
+      {onCleanStorage && (
+        <>
+          <div className="sectionLine">ARMAZENAMENTO & CACHE</div>
+          {storageInfo ? (
+            <p style={{fontSize: 11, color: '#aaa'}}>
+              Renders em disco: <strong>{storageInfo.renderCount} arquivos</strong> ({storageInfo.renderMb} MB)
+            </p>
+          ) : null}
+          <button onClick={onCleanStorage} style={{background: '#2c2525', borderColor: '#5c3a3a'}}>
+            🧹 Limpar renders antigos e temporários
+          </button>
+        </>
+      )}
+
       <p className="help">
         A biblioteca salva configurações, não copia vídeos. Preserve a pasta public/media.
       </p>
     </div>
   );
 };
+

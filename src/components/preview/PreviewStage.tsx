@@ -96,7 +96,7 @@ export const PreviewStage: React.FC<Props> = ({
   return (
     <main className="previewPanel">
       <div className="previewHeader">
-        <span>PREVIEW 9:16 · {p.width} × {p.height} · {formatFps(p.fps)} FPS</span>
+        <span>PREVIEW · {p.width} × {p.height} ({p.aspectRatio || '9:16'}) · {formatFps(p.fps)} FPS</span>
         <label className="check">
           <input
             type="checkbox"
@@ -117,7 +117,7 @@ export const PreviewStage: React.FC<Props> = ({
         )}
       </div>
 
-      <div ref={previewRef} className="previewFrame">
+      <div ref={previewRef} className="previewFrame" style={{aspectRatio: `${p.width} / ${p.height}`}}>
         <div ref={previewStageRef} className="previewStage">
           <Player
             ref={playerRef}

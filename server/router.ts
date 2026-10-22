@@ -1,7 +1,7 @@
 import type {IncomingMessage,ServerResponse} from 'node:http';
 import {answer} from './common';
 import {handleMediaInfo,handleUpload} from './api/media';
-import {handleRender,handleRenderStatus} from './api/render';
+import {handleRender,handleRenderCancel,handleRenderStatus,handleStorageCleanup,handleStorageInfo} from './api/render';
 import {handleSilences,handleTranscribe,handleTranscribeWords} from './api/audio';
 import {handleAiCaptionReview,handleAiDirector,handleAiFraming,handleAiImprove,handleAiRhythm,handleAiStyle} from './api/ai';
 
@@ -22,9 +22,23 @@ export async function handleApiRequest(req:IncomingMessage, res:ServerResponse):
       await handleRender(req, res);
       return true;
     }
+    if (url.startsWith('/api/render/') && url.endsWith('/cancel') && req.method === 'POST') {
+      const parts = url.split('/');
+      const id = parts[parts.length - 2] || '';
+      handleRenderCancel(req, res, id);
+      return true;
+    }
     if (url.startsWith('/api/render/') && req.method === 'GET') {
       const id = url.split('/').pop() || '';
       handleRenderStatus(req, res, id);
+      return true;
+    }
+    if (url === '/api/storage/info' && req.method === 'GET') {
+      handleStorageInfo(req, res);
+      return true;
+    }
+    if (url === '/api/storage/cleanup' && req.method === 'POST') {
+      handleStorageCleanup(req, res);
       return true;
     }
     if (url === '/api/silences' && req.method === 'POST') {

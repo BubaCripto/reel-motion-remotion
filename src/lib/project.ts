@@ -12,10 +12,41 @@ export type Keyframe = {time:number; x?:number;y?:number;scale?:number;rotate?:n
 export type Word = {id:string;text:string;highlight?:boolean;start:number;end:number; preset?:Preset;accent?:string;scale?:number;offsetX?:number;offsetY?:number};
 export type Cue = {id:string;start:number;end:number;text:string;source?:'transcript'|'manual';x?:number;y?:number;scale?:number;preset?:Preset;fontA?:string;fontB?:string;twoFonts?:boolean;fontWeight?:number;italic?:boolean;align?:'left'|'center'|'right';strokeWidth?:number;strokeColor?:string;highlightMode?:'color'|'box'|'underline'|'outline';accent?:string;foreground?:string;animationSpeed?:number;track?:number; keyframes?:Keyframe[];words?:Word[];rotation?:number;opacity?:number;outlineFill?:boolean;karaoke?:boolean};
 export type VideoClip = {id:string;src:string;start:number;end:number;sourceStart:number;speed:number;muted?:boolean;zoom?:number;x?:number;y?:number;keyframes?:Keyframe[];transition?:{type:TransitionType;duration?:number}};
+export type ColorGradePreset = 'none' | 'teal-orange' | 'moody-dark' | 'clean-bright' | 'cyber-neon' | 'monochrome';
+export const COLOR_GRADE_STYLES: Record<ColorGradePreset, { filter: string; overlayGradient?: string }> = {
+  'none': { filter: 'none' },
+  'teal-orange': {
+    filter: 'contrast(1.12) saturate(1.18) sepia(0.06)',
+    overlayGradient: 'linear-gradient(135deg, rgba(0, 150, 200, 0.08) 0%, rgba(255, 120, 0, 0.08) 100%)'
+  },
+  'moody-dark': {
+    filter: 'contrast(1.24) brightness(0.9) saturate(0.82)',
+    overlayGradient: 'radial-gradient(circle at center, transparent 30%, rgba(10, 15, 25, 0.25) 100%)'
+  },
+  'clean-bright': {
+    filter: 'brightness(1.06) contrast(1.08) saturate(1.12)',
+    overlayGradient: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 0%, transparent 100%)'
+  },
+  'cyber-neon': {
+    filter: 'contrast(1.25) saturate(1.45) hue-rotate(10deg)',
+    overlayGradient: 'linear-gradient(45deg, rgba(255, 0, 128, 0.07) 0%, rgba(0, 240, 255, 0.07) 100%)'
+  },
+  'monochrome': {
+    filter: 'grayscale(1) contrast(1.32) brightness(0.96)',
+    overlayGradient: 'radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.35) 100%)'
+  }
+};
+export type AspectRatioPreset = '9:16' | '4:5' | '1:1' | '16:9';
+export const ASPECT_RATIOS: Record<AspectRatioPreset, { width: number; height: number; label: string }> = {
+  '9:16': { width: 1080, height: 1920, label: '9:16 (Reels/TikTok)' },
+  '4:5': { width: 1080, height: 1350, label: '4:5 (Feed Portrait)' },
+  '1:1': { width: 1080, height: 1080, label: '1:1 (Feed Quadrado)' },
+  '16:9': { width: 1920, height: 1080, label: '16:9 (YouTube)' },
+};
 export type MotionOverlayType = 'kinetic-text' | 'stroke-path' | 'burst' | 'scene' | 'speed-lines' | 'camera-shake';
-export type Overlay = {id:string;kind:'shape'|'image'|'video'|'text'|'effect'|'audio'|'motion';name:string;start:number;end:number;track:number;x:number;y:number;scale:number;rotation:number;opacity:number;src?:string;text?:string;type?:'rectangle'|'circle'|'arrow'|'line'|'scribble'|'flash'|'grain'|'vignette'|'zoom-pulse';color?:string;strokeColor?:string;strokeWidth?:number;fontA?:string;fontWeight?:number;preset?:Preset;keyframes?:Keyframe[];volume?:number;sourceStart?:number;speed?:number;muted?:boolean;mediaRole?:'logo'|'broll';frameWidth?:number;frameHeight?:number;motionType?:MotionOverlayType;motionProps?:Record<string, any>};
+export type Overlay = {id:string;kind:'shape'|'image'|'video'|'text'|'effect'|'audio'|'motion';name:string;start:number;end:number;track:number;x:number;y:number;scale:number;rotation:number;opacity:number;src?:string;text?:string;type?:'rectangle'|'circle'|'arrow'|'line'|'scribble'|'flash'|'grain'|'vignette'|'zoom-pulse';color?:string;strokeColor?:string;strokeWidth?:number;fontA?:string;fontWeight?:number;preset?:Preset;keyframes?:Keyframe[];volume?:number;sourceStart?:number;speed?:number;muted?:boolean;mediaRole?:'logo'|'broll';frameWidth?:number;frameHeight?:number;motionType?:MotionOverlayType;motionProps?:Record<string, any>;ducking?:boolean;duckingAmount?:number};
 export type FontItem = {name:string;src:string};
-export type ReelProject = {id:string;name:string;fps:number;width:number;height:number;creativity:number;preset:Preset;fontA:string;fontB:string;twoFonts:boolean;background:string;foreground:string;accent:string;transparent:boolean;seed:number;videoSrc?:string;videoDuration?:number;clips:VideoClip[];cues:Cue[];overlays:Overlay[];fonts:FontItem[];safeZone?:boolean;introTrim?:number;exportFpsMode?:'source'|'manual';editorial?:RhythmAnalysis;rhythmVariant?:RhythmVariant;templateOrigin?:TemplateOrigin};
+export type ReelProject = {id:string;name:string;fps:number;width:number;height:number;aspectRatio?:AspectRatioPreset;colorGrade?:ColorGradePreset;creativity:number;preset:Preset;fontA:string;fontB:string;twoFonts:boolean;background:string;foreground:string;accent:string;transparent:boolean;seed:number;videoSrc?:string;videoDuration?:number;clips:VideoClip[];cues:Cue[];overlays:Overlay[];fonts:FontItem[];safeZone?:boolean;introTrim?:number;exportFpsMode?:'source'|'manual';editorial?:RhythmAnalysis;rhythmVariant?:RhythmVariant;templateOrigin?:TemplateOrigin};
 export const initialProject:ReelProject={exportFpsMode:'source',id:'demo',name:'Demo completo — Motion Studio',fps:30,width:1080,height:1920,creativity:72,preset:'kinetic',fontA:'Anton',fontB:'Playfair Display',twoFonts:true,background:'#101116',foreground:'#ffffff',accent:'#e8bd55',transparent:false,seed:17,videoSrc:'',videoDuration:12,clips:[],fonts:[],safeZone:true,cues:[{id:'demo-1',start:0,end:2.6,text:'Todo recurso em um [SÓ LUGAR]',x:50,y:68,preset:'neon-box',accent:'#2edbf0'},{id:'demo-2',start:2.6,end:5.4,text:'LEGENDAS que viram [MOTION]',x:50,y:69,preset:'handwritten-mix',accent:'#ffe043'},{id:'demo-3',start:5.4,end:8.5,text:'CORTES rápidos. Ideias [CLARAS.]',x:50,y:68,preset:'scribble-highlight',accent:'#ffe25e'},{id:'demo-4',start:8.5,end:12,text:'PRONTO PARA [PUBLICAR]',x:50,y:69,preset:'impact',highlightMode:'box',accent:'#e8bd55'}],overlays:[{id:'demo-title',kind:'text',name:'Título introdutório',text:'REEL MOTION',start:0,end:2.5,track:3,x:50,y:18,scale:1,rotation:0,opacity:1,color:'#e8bd55',fontA:'Montserrat',fontWeight:800,keyframes:[{time:0,x:50,y:12,scale:.7,opacity:0},{time:.45,x:50,y:18,scale:1,opacity:1}]},{id:'demo-arrow',kind:'shape',type:'arrow',name:'Seta animada',start:.35,end:2.45,track:3,x:72,y:35,scale:.9,rotation:-18,opacity:1,color:'#2edbf0',strokeWidth:10},{id:'demo-circle',kind:'shape',type:'circle',name:'Círculo de destaque',start:2.7,end:5.3,track:3,x:18,y:26,scale:.42,rotation:0,opacity:.9,color:'#e8bd55'},{id:'demo-line',kind:'shape',type:'line',name:'Linha editorial',start:5.5,end:8.3,track:3,x:50,y:31,scale:1,rotation:0,opacity:1,color:'#ffe25e',strokeWidth:12},{id:'demo-scribble',kind:'shape',type:'scribble',name:'Rabisco de destaque',start:8.7,end:11.8,track:3,x:50,y:55,scale:1.05,rotation:0,opacity:1,color:'#e8bd55',strokeWidth:12},{id:'demo-flash',kind:'effect',type:'flash',name:'Flash de entrada',start:0,end:.22,track:4,x:50,y:50,scale:1,rotation:0,opacity:.45,color:'#ffffff'},{id:'demo-grain',kind:'effect',type:'grain',name:'Textura grain',start:0,end:12,track:4,x:50,y:50,scale:1,rotation:0,opacity:1,color:'#ffffff'},{id:'demo-vignette',kind:'effect',type:'vignette',name:'Vinheta',start:0,end:12,track:4,x:50,y:50,scale:1,rotation:0,opacity:.72,color:'#000000'}]};
 const demoLabel=(preset:Preset)=>preset.replace(/-/g,' ').toUpperCase();
 initialProject.name='Demo completo — todos os estilos e elementos';

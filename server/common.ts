@@ -11,11 +11,12 @@ fs.mkdirSync(mediaDir,{recursive:true});
 fs.mkdirSync(renderDir,{recursive:true});
 
 export type Job = {
-  state: 'running'|'done'|'error';
+  state: 'running'|'done'|'error'|'cancelled';
   message: string;
   progress?: number;
   url?: string;
   silences?: {start:number;end:number}[];
+  process?: any;
 };
 
 export const jobs = new Map<string,Job>();

@@ -22,6 +22,9 @@ import {
   RIGHT_PANEL_MIN,
   RIGHT_PANEL_MAX,
   computeInitialPanelWidths,
+  ASPECT_RATIOS,
+  type AspectRatioPreset,
+  type ColorGradePreset,
   type CueStylePatch,
   type Cue,
   type Word,
@@ -85,6 +88,8 @@ function ProjectStudio() {
   const [error, setError] = useState('');
   const [renderJob, setRenderJob] = useState('');
   const [jobProgress, setJobProgress] = useState<number | null>(null);
+  const activeRenderJobId = useRef<string | null>(null);
+  const [storageInfo, setStorageInfo] = useState<{renderCount: number; renderMb: number} | null>(null);
   const [out, setOut] = useState('');
   const [batchFiles, setBatchFiles] = useState<string[]>([]);
   const [aiReviewSession, setAiReviewSession] = useState<AiReviewSession | null>(null);
@@ -119,6 +124,12 @@ function ProjectStudio() {
       return [];
     }
   });
+
+  useEffect(() => {
+    if (panel === 'library') {
+      loadStorageInfo();
+    }
+  }, [panel]);
 
   const [library, setLibrary] = useState<ReelProject[]>(() => {
     try {
@@ -691,24 +702,92 @@ function ProjectStudio() {
     const data = await r.json();
     if (!r.ok) throw Error(data.error);
     const id = data.id;
+    activeRenderJobId.current = id;
 
-    for (let n = 0; n < 3600; n++) {
-      await new Promise(resolve => setTimeout(resolve, 1300));
-      const j = await (await fetch('/api/render/' + id)).json();
-      setRenderJob(j.message || 'Renderizando...');
-      setJobProgress(typeof j.progress === 'number' ? j.progress : null);
-      if (j.state === 'done') {
-        setJobProgress(null);
-        callback?.(j.url);
-        return j.url as string;
+    try {
+      for (let n = 0; n < 3600; n++) {
+        await new Promise(resolve => setTimeout(resolve, 1300));
+        const res = await fetch('/api/render/' + id);
+        if (!res.ok) throw Error('Falha ao consultar status');
+        const j = await res.json();
+        setRenderJob(j.message || 'Renderizando...');
+        setJobProgress(typeof j.progress === 'number' ? j.progress : null);
+        if (j.state === 'done') {
+          setJobProgress(null);
+          callback?.(j.url);
+          return j.url as string;
+        }
+        if (j.state === 'cancelled') {
+          setJobProgress(null);
+          throw Error('Renderização cancelada');
+        }
+        if (j.state === 'error') {
+          setJobProgress(null);
+          throw Error(j.message);
+        }
       }
-      if (j.state === 'error') {
-        setJobProgress(null);
-        throw Error(j.message);
-      }
+      setJobProgress(null);
+      throw Error('Render excedeu o tempo limite');
+    } finally {
+      activeRenderJobId.current = null;
     }
+  };
+
+  const cancelRender = async () => {
+    if (activeRenderJobId.current) {
+      try {
+        await fetch(`/api/render/${activeRenderJobId.current}/cancel`, {method: 'POST'});
+      } catch {}
+    }
+    activeRenderJobId.current = null;
+    setRenderJob('');
     setJobProgress(null);
-    throw Error('Render excedeu o tempo limite');
+    notify('Renderização interrompida.');
+  };
+
+  const selectAspectRatio = (ratio: AspectRatioPreset) => {
+    const conf = ASPECT_RATIOS[ratio];
+    if (!conf) return;
+    rec();
+    setP(curr => ({
+      ...curr,
+      aspectRatio: ratio,
+      width: conf.width,
+      height: conf.height
+    }));
+    notify(`Formato alterado para ${conf.label}`);
+  };
+
+  const selectColorGrade = (grade: ColorGradePreset) => {
+    rec();
+    setP(curr => ({
+      ...curr,
+      colorGrade: grade
+    }));
+    notify(`Filtro de cor ajustado: ${grade}`);
+  };
+
+  const loadStorageInfo = async () => {
+    try {
+      const res = await fetch('/api/storage/info');
+      if (res.ok) {
+        const data = await res.json();
+        setStorageInfo({renderCount: data.renderCount, renderMb: data.renderMb});
+      }
+    } catch {}
+  };
+
+  const cleanStorage = async () => {
+    try {
+      const res = await fetch('/api/storage/cleanup', {method: 'POST'});
+      if (res.ok) {
+        const data = await res.json();
+        notify(`Limpeza concluída: ${data.deletedFiles} arquivos excluídos (${data.freedMb} MB liberados).`);
+        loadStorageInfo();
+      }
+    } catch (e) {
+      notify(`Falha ao limpar armazenamento: ${e}`);
+    }
   };
 
   const openTemplateVersion = (project: ReelProject) => {
@@ -1530,6 +1609,9 @@ function ProjectStudio() {
         onPickFont={() => pickerFont.current?.click()}
         onSave={save}
         onExportMp4={exportMp4}
+        onCancelRender={cancelRender}
+        onSelectAspectRatio={selectAspectRatio}
+        onSelectColorGrade={selectColorGrade}
       />
 
       <input hidden type="file" accept="video/*,.mov" ref={pickerVideo} onChange={e => openVideo(e.target.files?.[0])} />
@@ -1697,6 +1779,8 @@ function ProjectStudio() {
               }}
               onPickJson={() => pickerJson.current?.click()}
               onBatchRender={batchRender}
+              storageInfo={storageInfo}
+              onCleanStorage={cleanStorage}
             />
           )}
         </aside>
