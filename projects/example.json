@@ -1,0 +1,4 @@
+{
+  "id":"sample-1","name":"Matematica do lucro","fps":30,"width":1080,"height":1920,"creativity":78,"preset":"kinetic","fontA":"Anton","fontB":"Playfair Display","twoFonts":true,"background":"#111111","foreground":"#FFF8EC","accent":"#FFC94C","transparent":false,"seed":23,
+  "cues":[{"id":"1","start":0,"end":2.4,"text":"Você pode errar 60% das operações"},{"id":"2","start":2.4,"end":4.8,"text":"e ainda assim fechar no lucro."},{"id":"3","start":4.8,"end":7.2,"text":"É matemática. Não sorte."}]
+}

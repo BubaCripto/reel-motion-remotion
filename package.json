@@ -1,0 +1,30 @@
+{
+  "name": "reel-motion-studio-v6",
+  "version": "6.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "studio": "remotion studio src/remotion/index.ts",
+    "render": "node scripts/render.mjs",
+    "render:example": "node scripts/render.mjs projects/example.json out/example.mp4",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.490",
+    "@remotion/player": "^4.0.490",
+    "@remotion/google-fonts": "^4.0.490",
+    "remotion": "^4.0.490",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lucide-react": "^0.468.0"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0",
+    "typescript": "^5.7.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
+  }
+}
