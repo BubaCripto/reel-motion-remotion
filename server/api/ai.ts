@@ -2,6 +2,7 @@ import type {IncomingMessage,ServerResponse} from 'node:http';
 import {answer,base,collect} from '../common';
 import {analyzeRhythm} from '../rhythm';
 import {validateProject} from '../../src/lib/project';
+import {generateSemanticMotionBlueprint} from '../../src/lib/motionCompiler';
 
 export async function handleAiRhythm(req:IncomingMessage, res:ServerResponse): Promise<void> {
   const body = JSON.parse((await collect(req, 2 * 1024 * 1024)).toString());
@@ -202,9 +203,110 @@ export async function handleAiCaptionReview(req:IncomingMessage, res:ServerRespo
     const value = JSON.parse(raw);
     const revised = new Map((Array.isArray(value.cues) ? value.cues : []).map((c:any) => [String(c.id), String(c.text || '').trim()]));
     const originalById = new Map(sourceCues.map((c:any) => [String(c.id), c]));
-    const output = cues.map((c:any) => ({...originalById.get(c.id), text: revised.has(c.id) && revised.get(c.id) ? revised.get(c.id) : c.text})).filter((c:any) => ids.has(c.id));
+    const output = cues.map((c:any) => ({...(originalById.get(c.id) || {}), text: revised.has(c.id) && revised.get(c.id) ? revised.get(c.id) : c.text})).filter((c:any) => ids.has(c.id));
     return answer(res, 200, {provider: 'ag-local-bridge', model, cues: output});
   } catch (e) {
     return answer(res, 503, {error: 'Gemini via AG Local Bridge não revisou as legendas. Detalhe: ' + String(e)});
   }
 }
+
+export async function handleAiDirector(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = JSON.parse((await collect(req, 1024 * 1024)).toString());
+  const cues = Array.isArray(body.cues) ? body.cues : [];
+  if (!cues.length) {
+    return answer(res, 400, { error: 'Gere ou importe legendas antes de solicitar a Direção de Motion Graphics.' });
+  }
+
+  const style = (body.style || 'viral-after-effects') as any;
+  const intensity = (body.intensity || 'balanced') as any;
+  const videoDuration = Math.max(1, Number(body.videoDuration) || 15);
+  const bridgeUrl = (process.env.REEL_AG_BRIDGE_URL || 'http://127.0.0.1:11435/v1').replace(/\/$/, '');
+  const model = String(process.env.REEL_AG_MODEL || body.model || 'antigravity-claude-sonnet-4-6');
+
+  // Attempt AG Local Bridge first
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 45000);
+    const r = await fetch(bridgeUrl + '/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'authorization': 'Bearer local' },
+      signal: ctrl.signal,
+      body: JSON.stringify({
+        model,
+        temperature: 0.25,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: `Você é um Diretor de Motion Design Sênior especializado em Reels de alto impacto viral (estilo After Effects, Vox, Ordinary Folk).
+PROIBIDO USAR CARDS ESTÁTICOS DE UI.
+Gere uma coreografia de motion graphics frase por frase sincronizada aos timestamps.
+Retorne SOMENTE JSON rigoroso no formato:
+{
+  "directorVision": string,
+  "cameraPunches": [{"time": number, "scale": number, "transition": "flash"|"whip-right"|"zoom-in"|"crossfade", "reason": string}],
+  "motionLayers": [
+    {
+      "id": string,
+      "type": "kinetic-text"|"stroke-path"|"burst"|"scene"|"speed-lines"|"camera-shake",
+      "name": string,
+      "start": number,
+      "end": number,
+      "x": number,
+      "y": number,
+      "scale": number,
+      "color": string,
+      "text": string,
+      "motionProps": {
+        "style"?: "3d-tilt"|"elastic-bounce"|"stagger-drop",
+        "shape"?: "curved-arrow"|"scribble-circle"|"marker-underline"|"target-reticle",
+        "scene"?: "growth-graph"|"target-lock"|"rocket-launch"|"stamp-impact"|"hazard-warning"|"hourglass"|"speed-gauge"|"neural-brain",
+        "label"?: string,
+        "metric"?: string,
+        "accent"?: string
+      },
+      "sfx": "whoosh-fast"|"impact-boom"|"pop-clean"|"camera-click"|"vinyl-scratch"|"coin-ding"|"riser-speed"
+    }
+  ],
+  "soundDesign": [{"time": number, "sfx": string, "volume": number}]
+}
+Mantenha os grafismos no topo (y: 25% a 45%) para nunca cobrir legendas ou o rosto do orador.`
+          },
+          {
+            role: 'user',
+            content: `Estilo: ${style}, Intensidade: ${intensity}, Duração do vídeo: ${videoDuration}s.\nLegendas: ${JSON.stringify(cues.map((c: any) => ({ start: c.start, end: c.end, text: c.text })))}`
+          }
+        ],
+        stream: false
+      })
+    });
+    clearTimeout(timeout);
+    if (r.ok) {
+      const data = await r.json() as any;
+      const raw = String(data?.choices?.[0]?.message?.content || '').replace(/^```json\s*|\s*```$/g, '');
+      const value = JSON.parse(raw);
+      if (Array.isArray(value.motionLayers)) {
+        return answer(res, 200, {
+          provider: 'ag-local-bridge',
+          model,
+          blueprint: {
+            ...value,
+            style,
+            intensity
+          }
+        });
+      }
+    }
+  } catch (err) {
+    // Graceful fallback to deterministic semantic generator below
+  }
+
+  // Fallback: Intelligent Deterministic Semantic Engine
+  const blueprint = generateSemanticMotionBlueprint(cues, style, intensity, videoDuration);
+  return answer(res, 200, {
+    provider: 'semantic-motion-engine',
+    model: 'built-in-semantic-director',
+    blueprint
+  });
+}
+

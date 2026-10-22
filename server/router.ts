@@ -3,7 +3,7 @@ import {answer} from './common';
 import {handleMediaInfo,handleUpload} from './api/media';
 import {handleRender,handleRenderStatus} from './api/render';
 import {handleSilences,handleTranscribe,handleTranscribeWords} from './api/audio';
-import {handleAiCaptionReview,handleAiFraming,handleAiImprove,handleAiRhythm,handleAiStyle} from './api/ai';
+import {handleAiCaptionReview,handleAiDirector,handleAiFraming,handleAiImprove,handleAiRhythm,handleAiStyle} from './api/ai';
 
 export async function handleApiRequest(req:IncomingMessage, res:ServerResponse): Promise<boolean> {
   const url = req.url?.split('?')[0] || '';
@@ -57,6 +57,10 @@ export async function handleApiRequest(req:IncomingMessage, res:ServerResponse):
     }
     if (url === '/api/ai-caption-review' && req.method === 'POST') {
       await handleAiCaptionReview(req, res);
+      return true;
+    }
+    if (url === '/api/ai-director' && req.method === 'POST') {
+      await handleAiDirector(req, res);
       return true;
     }
 

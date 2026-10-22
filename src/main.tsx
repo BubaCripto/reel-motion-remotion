@@ -54,6 +54,8 @@ import {EffectsPanel} from './components/panels/EffectsPanel';
 import {AiPanel} from './components/panels/AiPanel';
 import {LibraryPanel} from './components/panels/LibraryPanel';
 import {AiReviewModal, type AiReviewSession, type AiCutItem} from './components/common/AiReviewModal';
+import {MotionReviewModal} from './components/common/MotionReviewModal';
+import {applyDirectorBlueprint, type DirectorBlueprint, type DirectorStyle, type DirectorIntensity} from './lib/motionCompiler';
 import {useShortcuts} from './hooks/useShortcuts';
 import {builtinFonts, storage, kitsStore, type Selection, type Drag, type BrandKit} from './types/editor';
 
@@ -94,6 +96,10 @@ function ProjectStudio() {
   const [aiPrompt, setAiPrompt] = useState('Remova pausas longas, vícios de linguagem, frases incompletas e erros evidentes. Preserve as ideias importantes e deixe o vídeo mais direto.');
   const [agModel, setAgModel] = useState('antigravity-gemini-3.8-flash-medium');
   const [aiSummary, setAiSummary] = useState('');
+  const [motionStyle, setMotionStyle] = useState<DirectorStyle>('viral-after-effects');
+  const [motionIntensity, setMotionIntensity] = useState<DirectorIntensity>('balanced');
+  const [isDirectingMotion, setIsDirectingMotion] = useState(false);
+  const [motionReviewSession, setMotionReviewSession] = useState<DirectorBlueprint | null>(null);
 
   const [safeZone, setSafeZone] = useState(true);
   const [safeTarget, setSafeTarget] = useState<'reels' | 'post'>('reels');
@@ -1259,6 +1265,45 @@ function ProjectStudio() {
     });
   };
 
+  const directAiMotion = async () => {
+    if (!p.cues.length) return setError('Gere ou importe legendas antes de criar o Motion Graphics.');
+    setError('');
+    setIsDirectingMotion(true);
+    setRenderJob('Diretor de IA compondo coreografia de Motion Graphics...');
+    try {
+      const r = await fetch('/api/ai-director', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          cues: p.cues,
+          style: motionStyle,
+          intensity: motionIntensity,
+          videoDuration: p.videoDuration || duration,
+          model: agModel
+        })
+      });
+      const data = await r.json();
+      if (!r.ok) throw Error(data.error || 'Falha ao gerar motion graphics');
+      const blueprint: DirectorBlueprint = data.blueprint;
+      setMotionReviewSession(blueprint);
+      notify(`Direção de Motion pronta: ${blueprint.motionLayers.length} cenas e ${blueprint.soundDesign.length} SFX gerados.`);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setIsDirectingMotion(false);
+      setRenderJob('');
+    }
+  };
+
+  const applyMotionBlueprint = (filteredBlueprint: DirectorBlueprint) => {
+    rec();
+    const updated = applyDirectorBlueprint(p, filteredBlueprint, { replaceExistingMotion: true });
+    setP(updated);
+    notify(`✨ Motion Graphics completo aplicado na timeline!`);
+    setAiSummary(filteredBlueprint.directorVision);
+    setMotionReviewSession(null);
+  };
+
   const cutSilences = async () => {
     const c = clip || p.clips[0];
     if (!c) return setError('Importe um vídeo para detectar pausas');
@@ -1611,6 +1656,12 @@ function ProjectStudio() {
               onFaceReframe={faceReframe}
               onAutoZoom={autoZoom}
               onCutSilences={cutSilences}
+              motionStyle={motionStyle}
+              onSetMotionStyle={setMotionStyle}
+              motionIntensity={motionIntensity}
+              onSetMotionIntensity={setMotionIntensity}
+              onDirectAiMotion={directAiMotion}
+              isDirectingMotion={isDirectingMotion}
             />
           )}
 
@@ -1808,6 +1859,13 @@ function ProjectStudio() {
         onToggleAll={toggleAllAiCuts}
         onApply={applyAiReviewCuts}
         onCancel={() => setAiReviewSession(null)}
+      />
+
+      <MotionReviewModal
+        blueprint={motionReviewSession}
+        fps={fps}
+        onApply={applyMotionBlueprint}
+        onCancel={() => setMotionReviewSession(null)}
       />
     </div>
   );

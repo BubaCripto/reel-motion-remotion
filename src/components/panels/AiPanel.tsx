@@ -1,4 +1,4 @@
-import React from 'react';
+import type { DirectorStyle, DirectorIntensity } from '../../lib/motionCompiler';
 
 type Props = {
   agModel: string;
@@ -19,6 +19,12 @@ type Props = {
   onFaceReframe: () => void;
   onAutoZoom: () => void;
   onCutSilences: () => void;
+  motionStyle: DirectorStyle;
+  onSetMotionStyle: (s: DirectorStyle) => void;
+  motionIntensity: DirectorIntensity;
+  onSetMotionIntensity: (i: DirectorIntensity) => void;
+  onDirectAiMotion: () => void;
+  isDirectingMotion: boolean;
 };
 
 export const AiPanel: React.FC<Props> = ({
@@ -39,10 +45,58 @@ export const AiPanel: React.FC<Props> = ({
   onSuggestGeminiFraming,
   onFaceReframe,
   onAutoZoom,
-  onCutSilences
+  onCutSilences,
+  motionStyle,
+  onSetMotionStyle,
+  motionIntensity,
+  onSetMotionIntensity,
+  onDirectAiMotion,
+  isDirectingMotion
 }) => {
   return (
     <div className="fields">
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(255, 224, 67, 0.12), rgba(0, 240, 255, 0.08))',
+        border: '1px solid rgba(255, 224, 67, 0.4)',
+        borderRadius: 10,
+        padding: '16px',
+        marginBottom: '20px'
+      }}>
+        <h3 style={{ margin: '0 0 8px', color: '#ffe043', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>🎬</span> DIREÇÃO DE MOTION GRAPHICS
+        </h3>
+        <p style={{ margin: '0 0 14px', fontSize: 13, color: '#e2e8f0', lineHeight: 1.4 }}>
+          Gera motion design profissional frase por frase: tipografia cinética 3D, trim paths vetoriais, partículas, velocidade e sound design sincronizado.
+        </p>
+
+        <label style={{ display: 'block', marginBottom: 10 }}>
+          Estilo Visual
+          <select value={motionStyle} onChange={e => onSetMotionStyle(e.target.value as any)}>
+            <option value="viral-after-effects">🔥 Viral After Effects (Neon + 3D Tilt + Bursts)</option>
+            <option value="cyber-tech">⚡ Cyber Tech HUD (Retículos + Rede Neural + Glitch)</option>
+            <option value="minimalist-editorial">🖋️ Minimalista Editorial (Ampulheta + Traços Finos)</option>
+          </select>
+        </label>
+
+        <label style={{ display: 'block', marginBottom: 14 }}>
+          Ritmo / Intensidade
+          <select value={motionIntensity} onChange={e => onSetMotionIntensity(e.target.value as any)}>
+            <option value="subtle">Discreto (Foco nas principais palavras e CTA)</option>
+            <option value="balanced">Equilibrado (Cenas a cada 4-7s)</option>
+            <option value="aggressive">Agressivo / Alta Energia (A cada 2-3s estilo viral)</option>
+          </select>
+        </label>
+
+        <button
+          className="accentBtn"
+          onClick={onDirectAiMotion}
+          disabled={!!renderJob || isDirectingMotion || !hasCues}
+          style={{ width: '100%', padding: '12px', fontSize: 14, fontWeight: 800 }}
+        >
+          {isDirectingMotion ? 'Gerando Motion Graphics...' : '✨ Criar Motion Graphics Completo com IA'}
+        </button>
+      </div>
+
       <h3>FERRAMENTAS INTELIGENTES</h3>
       <div className="sectionLine">AG LOCAL BRIDGE · GEMINI</div>
       <p>Usa Gemini via Antigravity para revisar a transcrição, aplicar cortes e sugerir a direção criativa.</p>

@@ -25,7 +25,7 @@ import {loadFont as loadCaveat} from '@remotion/google-fonts/Caveat';
 import {loadFont as loadLibre} from '@remotion/google-fonts/LibreBaskerville';
 const map:Record<string,string>={Anton:loadAnton().fontFamily,'Playfair Display':loadPlayfair().fontFamily,Montserrat:loadMontserrat().fontFamily,Oswald:loadOswald().fontFamily,Inter:loadInter().fontFamily,Caveat:loadCaveat().fontFamily,'Libre Baskerville':loadLibre().fontFamily};
 const font=(s?:string)=>map[s||'']||s||'Arial';
-const media=(src?:string)=>!src?'':src.startsWith('/media/')||src==='/demo-grid.svg'?staticFile(src.slice(1)):src;
+const media=(src?:string)=>!src?'':src.startsWith('/media/')||src.startsWith('/sfx/')||src==='/demo-grid.svg'?staticFile(src.slice(1)):src;
 const rand=(seed:number,i:number)=>{const n=Math.sin(seed*78.233+i*12.989)*43758.5453;return n-Math.floor(n)};
 function motion(preset:Preset,enter:number,frame:number,i:number,intensity:number,random:number):React.CSSProperties{
  const off=1-enter;
