@@ -7,10 +7,11 @@ export const PRESETS = [
 ] as const;
 export type Preset = typeof PRESETS[number];
 export type Motion = 'linear'|'ease'|'spring'|'bounce';
+export type TransitionType = 'none' | 'crossfade' | 'zoom-in' | 'zoom-out' | 'whip-right' | 'whip-left' | 'flash';
 export type Keyframe = {time:number; x?:number;y?:number;scale?:number;rotate?:number;opacity?:number};
 export type Word = {id:string;text:string;highlight?:boolean;start:number;end:number; preset?:Preset;accent?:string;scale?:number;offsetX?:number;offsetY?:number};
-export type Cue = {id:string;start:number;end:number;text:string;source?:'transcript'|'manual';x?:number;y?:number;scale?:number;preset?:Preset;fontA?:string;fontB?:string;twoFonts?:boolean;fontWeight?:number;italic?:boolean;align?:'left'|'center'|'right';strokeWidth?:number;strokeColor?:string;highlightMode?:'color'|'box'|'underline'|'outline';accent?:string;foreground?:string;animationSpeed?:number;track?:number; keyframes?:Keyframe[];words?:Word[];rotation?:number;opacity?:number;outlineFill?:boolean};
-export type VideoClip = {id:string;src:string;start:number;end:number;sourceStart:number;speed:number;muted?:boolean;zoom?:number;x?:number;y?:number;keyframes?:Keyframe[]};
+export type Cue = {id:string;start:number;end:number;text:string;source?:'transcript'|'manual';x?:number;y?:number;scale?:number;preset?:Preset;fontA?:string;fontB?:string;twoFonts?:boolean;fontWeight?:number;italic?:boolean;align?:'left'|'center'|'right';strokeWidth?:number;strokeColor?:string;highlightMode?:'color'|'box'|'underline'|'outline';accent?:string;foreground?:string;animationSpeed?:number;track?:number; keyframes?:Keyframe[];words?:Word[];rotation?:number;opacity?:number;outlineFill?:boolean;karaoke?:boolean};
+export type VideoClip = {id:string;src:string;start:number;end:number;sourceStart:number;speed:number;muted?:boolean;zoom?:number;x?:number;y?:number;keyframes?:Keyframe[];transition?:{type:TransitionType;duration?:number}};
 export type Overlay = {id:string;kind:'shape'|'image'|'video'|'text'|'effect'|'audio';name:string;start:number;end:number;track:number;x:number;y:number;scale:number;rotation:number;opacity:number;src?:string;text?:string;type?:'rectangle'|'circle'|'arrow'|'line'|'scribble'|'flash'|'grain'|'vignette'|'zoom-pulse';color?:string;strokeColor?:string;strokeWidth?:number;fontA?:string;fontWeight?:number;preset?:Preset;keyframes?:Keyframe[];volume?:number;sourceStart?:number;speed?:number;muted?:boolean;mediaRole?:'logo'|'broll';frameWidth?:number;frameHeight?:number};
 export type FontItem = {name:string;src:string};
 export type ReelProject = {id:string;name:string;fps:number;width:number;height:number;creativity:number;preset:Preset;fontA:string;fontB:string;twoFonts:boolean;background:string;foreground:string;accent:string;transparent:boolean;seed:number;videoSrc?:string;videoDuration?:number;clips:VideoClip[];cues:Cue[];overlays:Overlay[];fonts:FontItem[];safeZone?:boolean;introTrim?:number;exportFpsMode?:'source'|'manual';editorial?:RhythmAnalysis;rhythmVariant?:RhythmVariant;templateOrigin?:TemplateOrigin};
@@ -74,7 +75,7 @@ export const seconds=(v:number)=>Math.max(0,v).toFixed(2)+'s';
 export const CUE_STYLE_KEYS = [
   'preset','fontA','fontB','twoFonts','fontWeight','italic',
   'align','highlightMode','foreground','accent','strokeWidth',
-  'strokeColor','scale','x','y','rotation','opacity','animationSpeed','outlineFill'
+  'strokeColor','scale','x','y','rotation','opacity','animationSpeed','outlineFill','karaoke'
 ] as const;
 export type CueStyleKey = typeof CUE_STYLE_KEYS[number];
 export type CueStylePatch = Partial<Pick<Cue, CueStyleKey>>;

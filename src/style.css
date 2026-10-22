@@ -70,4 +70,12 @@
   position: relative;
   z-index: 1;
 }
+.timelineMarquee {
+  position: absolute;
+  border: 1px dashed #eab308;
+  background: rgba(234, 179, 8, 0.18);
+  pointer-events: none;
+  z-index: 40;
+  border-radius: 4px;
+}
 

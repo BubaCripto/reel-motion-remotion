@@ -47,8 +47,15 @@ export async function handleTranscribeWords(req:IncomingMessage, res:ServerRespo
   run(python, ['scripts/transcribe_words.py', filename, String(body.model || 'small'), out], base, (code, msg) => {
     if (job.state !== 'running') return;
     job.state = code === 0 && fs.existsSync(out) ? 'done' : 'error';
+    job.progress = code === 0 ? 100 : undefined;
     job.message = job.state === 'done' ? 'Palavras sincronizadas' : 'faster-whisper não está pronto: ' + msg.slice(-600);
     if (job.state === 'done') job.url = '/renders/' + id + '.json';
+  }, (chunk) => {
+    const pctMatch = chunk.match(/([0-9]{1,3})%/);
+    if (pctMatch) {
+      job.progress = Math.min(99, Math.max(1, Number(pctMatch[1])));
+      job.message = `Sincronizando palavras: ${job.progress}%`;
+    }
   });
 
   return answer(res, 200, {id});
@@ -63,7 +70,7 @@ export async function handleTranscribe(req:IncomingMessage, res:ServerResponse):
   const output = path.join(os.tmpdir(), 'reel-transcribe-' + id);
   fs.mkdirSync(output, {recursive: true});
 
-  const job: Job = {state: 'running', message: 'Whisper está transcrevendo o arquivo'};
+  const job: Job = {state: 'running', message: 'Whisper está transcrevendo o arquivo', progress: 5};
   jobs.set(id, job);
 
   const filename = path.join(base, 'public', String(body.src).slice(1));
@@ -85,8 +92,15 @@ export async function handleTranscribe(req:IncomingMessage, res:ServerResponse):
     const out = '/renders/' + id + '.srt';
     fs.copyFileSync(path.join(output, srt), path.join(renderDir, id + '.srt'));
     job.state = 'done';
+    job.progress = 100;
     job.message = 'Transcrição pronta';
     job.url = out;
+  }, (chunk) => {
+    const pctMatch = chunk.match(/([0-9]{1,3})%/);
+    if (pctMatch) {
+      job.progress = Math.min(99, Math.max(1, Number(pctMatch[1])));
+      job.message = `Whisper transcrevendo: ${job.progress}%`;
+    }
   });
 
   return answer(res, 200, {id});

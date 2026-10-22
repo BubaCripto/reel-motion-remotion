@@ -53,6 +53,7 @@ import {StylesPanel} from './components/panels/StylesPanel';
 import {EffectsPanel} from './components/panels/EffectsPanel';
 import {AiPanel} from './components/panels/AiPanel';
 import {LibraryPanel} from './components/panels/LibraryPanel';
+import {AiReviewModal, type AiReviewSession, type AiCutItem} from './components/common/AiReviewModal';
 import {useShortcuts} from './hooks/useShortcuts';
 import {builtinFonts, storage, kitsStore, type Selection, type Drag, type BrandKit} from './types/editor';
 
@@ -81,8 +82,10 @@ function ProjectStudio() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [renderJob, setRenderJob] = useState('');
+  const [jobProgress, setJobProgress] = useState<number | null>(null);
   const [out, setOut] = useState('');
   const [batchFiles, setBatchFiles] = useState<string[]>([]);
+  const [aiReviewSession, setAiReviewSession] = useState<AiReviewSession | null>(null);
 
   const [panel, setPanel] = useState<'styles' | 'edit' | 'effects' | 'library' | 'ai' | 'rhythm' | 'templates'>('edit');
   const [focusedRhythm, setFocusedRhythm] = useState<string>('');
@@ -687,12 +690,18 @@ function ProjectStudio() {
       await new Promise(resolve => setTimeout(resolve, 1300));
       const j = await (await fetch('/api/render/' + id)).json();
       setRenderJob(j.message || 'Renderizando...');
+      setJobProgress(typeof j.progress === 'number' ? j.progress : null);
       if (j.state === 'done') {
+        setJobProgress(null);
         callback?.(j.url);
         return j.url as string;
       }
-      if (j.state === 'error') throw Error(j.message);
+      if (j.state === 'error') {
+        setJobProgress(null);
+        throw Error(j.message);
+      }
     }
+    setJobProgress(null);
     throw Error('Render excedeu o tempo limite');
   };
 
@@ -785,7 +794,9 @@ function ProjectStudio() {
       await new Promise(done => setTimeout(done, 1000));
       const j = await (await fetch('/api/render/' + id)).json();
       setRenderJob(j.message);
+      setJobProgress(typeof j.progress === 'number' ? j.progress : null);
       if (j.state === 'done') {
+        setJobProgress(null);
         if (kind === 'transcribe') await applyGeneratedCaptions(parseSrt(await (await fetch(j.url)).text()), src);
         if (kind === 'words') {
           const data = await (await fetch(j.url)).json();
@@ -794,7 +805,10 @@ function ProjectStudio() {
         }
         return;
       }
-      if (j.state === 'error') throw Error(j.message);
+      if (j.state === 'error') {
+        setJobProgress(null);
+        throw Error(j.message);
+      }
     }
   };
 
@@ -1147,55 +1161,102 @@ function ProjectStudio() {
         return all;
       }, []);
       const rewrites = new Map<string, string>((Array.isArray(result.rewrites) ? result.rewrites : []).map((x: any) => [String(x.id), String(x.text)]));
-      const removedBefore = (time: number) => cuts.reduce((sum: number, c: any) => sum + (time >= c.end ? c.end - c.start : time > c.start ? time - c.start : 0), 0);
-      const mapTime = (time: number) => Math.max(0, time - removedBefore(time));
-      const overlaps = (a: number, b: number) => cuts.some((c: any) => c.start < b && c.end > a);
-      const clips = p.clips.flatMap(c => {
-        let at = c.start;
-        const pieces: VideoClip[] = [];
-        for (const cut of cuts) {
-          if (cut.end <= at || cut.start >= c.end) continue;
-          const end = Math.min(c.end, cut.start);
-          if (end - at >= 1 / fps) {
-            pieces.push({
-              ...clone(c),
-              id: pieces.length ? uid() : c.id,
-              start: mapTime(at),
-              end: mapTime(end),
-              sourceStart: c.sourceStart + (at - c.start) * c.speed
-            });
-          }
-          at = Math.max(at, cut.end);
-        }
-        if (c.end - at >= 1 / fps) {
-          pieces.push({
-            ...clone(c),
-            id: pieces.length ? uid() : c.id,
-            start: mapTime(at),
-            end: mapTime(c.end),
-            sourceStart: c.sourceStart + (at - c.start) * c.speed
-          });
-        }
-        return pieces;
+      const cutItems: AiCutItem[] = cuts.map((c: any, i: number) => ({
+        id: 'cut-' + i + '-' + uid(),
+        start: c.start,
+        end: c.end,
+        reason: c.reason,
+        selected: true
+      }));
+      setAiReviewSession({
+        cuts: cutItems,
+        rewrites: Array.from(rewrites.entries()),
+        summary: result.summary || 'Análise da IA finalizada.',
+        originalDuration: duration
       });
-      const cues = p.cues
-        .filter(c => !isTranscript(c) || !overlaps(c.start, c.end))
-        .map(c =>
-          isTranscript(c)
-            ? {...c, start: mapTime(c.start), end: mapTime(c.end), text: rewrites.get(c.id) ?? c.text, words: undefined}
-            : {...c, start: mapTime(c.start), end: Math.max(mapTime(c.start) + 1 / fps, mapTime(c.end))}
-        );
-      const overlays = p.overlays.map(o => ({...o, start: mapTime(o.start), end: Math.max(mapTime(o.start) + 1 / fps, mapTime(o.end))}));
-      rec();
-      setP({...p, clips, cues, overlays, videoDuration: Math.max(1, ...clips.map(c => c.end))});
-      if (clips[0]) select({kind: 'clip', id: clips[0].id});
-      setAiSummary(`${result.summary || 'Edição melhorada.'} ${cuts.length} corte(s) aplicado(s); ${rewrites.size} legenda(s) revisada(s).`);
-      notify('Melhorias da IA aplicadas. Revise os cortes antes de exportar.');
+      notify(`A IA sugeriu ${cutItems.length} cortes. Revise na janela para confirmar.`);
     } catch (e) {
       setError(String(e));
     } finally {
       setRenderJob('');
+      setJobProgress(null);
     }
+  };
+
+  const applyAiReviewCuts = () => {
+    if (!aiReviewSession) return;
+    const activeCuts = aiReviewSession.cuts.filter(c => c.selected);
+    if (!activeCuts.length) {
+      setAiReviewSession(null);
+      return;
+    }
+    const rewrites = new Map<string, string>(aiReviewSession.rewrites);
+    const cuts = activeCuts;
+    const removedBefore = (time: number) => cuts.reduce((sum: number, c: any) => sum + (time >= c.end ? c.end - c.start : time > c.start ? time - c.start : 0), 0);
+    const mapTime = (time: number) => Math.max(0, time - removedBefore(time));
+    const overlaps = (a: number, b: number) => cuts.some((c: any) => c.start < b && c.end > a);
+    const clips = p.clips.flatMap(c => {
+      let at = c.start;
+      const pieces: VideoClip[] = [];
+      for (const cut of cuts) {
+        if (cut.end <= at || cut.start >= c.end) continue;
+        const end = Math.min(c.end, cut.start);
+        if (end - at >= 1 / fps) {
+          pieces.push({
+            ...clone(c),
+            id: pieces.length ? uid() : c.id,
+            start: mapTime(at),
+            end: mapTime(end),
+            sourceStart: c.sourceStart + (at - c.start) * c.speed
+          });
+        }
+        at = Math.max(at, cut.end);
+      }
+      if (c.end - at >= 1 / fps) {
+        pieces.push({
+          ...clone(c),
+          id: pieces.length ? uid() : c.id,
+          start: mapTime(at),
+          end: mapTime(c.end),
+          sourceStart: c.sourceStart + (at - c.start) * c.speed
+        });
+      }
+      return pieces;
+    });
+    const cues = p.cues
+      .filter(c => !isTranscript(c) || !overlaps(c.start, c.end))
+      .map(c =>
+        isTranscript(c)
+          ? {...c, start: mapTime(c.start), end: mapTime(c.end), text: rewrites.get(c.id) ?? c.text, words: undefined}
+          : {...c, start: mapTime(c.start), end: Math.max(mapTime(c.start) + 1 / fps, mapTime(c.end))}
+      );
+    const overlays = p.overlays.map(o => ({...o, start: mapTime(o.start), end: Math.max(mapTime(o.start) + 1 / fps, mapTime(o.end))}));
+    rec();
+    setP({...p, clips, cues, overlays, videoDuration: Math.max(1, ...clips.map(c => c.end))});
+    if (clips[0]) select({kind: 'clip', id: clips[0].id});
+    setAiSummary(`${aiReviewSession.summary} ${cuts.length} corte(s) aplicado(s); ${rewrites.size} legenda(s) revisada(s).`);
+    notify(`${cuts.length} cortes da IA aplicados.`);
+    setAiReviewSession(null);
+  };
+
+  const toggleAiCut = (id: string) => {
+    setAiReviewSession(current => {
+      if (!current) return null;
+      return {
+        ...current,
+        cuts: current.cuts.map(c => c.id === id ? {...c, selected: !c.selected} : c)
+      };
+    });
+  };
+
+  const toggleAllAiCuts = (selectAll: boolean) => {
+    setAiReviewSession(current => {
+      if (!current) return null;
+      return {
+        ...current,
+        cuts: current.cuts.map(c => ({...c, selected: selectAll}))
+      };
+    });
   };
 
   const cutSilences = async () => {
@@ -1644,6 +1705,7 @@ function ProjectStudio() {
           notice={notice}
           error={error}
           renderJob={renderJob}
+          jobProgress={jobProgress}
           out={out}
         />
 
@@ -1736,6 +1798,16 @@ function ProjectStudio() {
         moveScrub={moveScrub}
         endScrub={endScrub}
         snapLine={snapLine}
+        onSelectMultipleCues={ids => setSelectedCueIds(ids)}
+      />
+
+      <AiReviewModal
+        session={aiReviewSession}
+        fps={fps}
+        onToggleCut={toggleAiCut}
+        onToggleAll={toggleAllAiCuts}
+        onApply={applyAiReviewCuts}
+        onCancel={() => setAiReviewSession(null)}
       />
     </div>
   );

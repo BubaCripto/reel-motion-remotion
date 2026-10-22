@@ -214,6 +214,14 @@ export const EditPanel: React.FC<Props> = ({
                   </button>
                 </>
               )}
+              <label className="check" style={{background: 'rgba(232,189,85,0.08)', padding: '7px 10px', borderRadius: 7, margin: '10px 0', border: '1px solid #755d30'}}>
+                <input
+                  type="checkbox"
+                  checked={!!cue.karaoke}
+                  onChange={e => onEditCue(cue.id, {karaoke: e.target.checked})}
+                />
+                <strong style={{color: '#f6d780'}}>🎤 Karaokê Dinâmico (OpusClip / Hormozi)</strong>
+              </label>
               <label>
                 Preset{' '}
                 {selectedCueIds.length > 1 && selectedCueIds.includes(cue.id) && applyToAllSelected
@@ -486,6 +494,46 @@ export const EditPanel: React.FC<Props> = ({
             />{' '}
             Silenciar este trecho
           </label>
+          <div className="sectionLine">TRANSIÇÃO DE ENTRADA</div>
+          <label>
+            Tipo de transição
+            <select
+              value={clip.transition?.type ?? 'none'}
+              onChange={e =>
+                onEditClip(clip.id, {
+                  transition: {
+                    type: e.target.value as any,
+                    duration: clip.transition?.duration ?? 0.35
+                  }
+                })
+              }
+            >
+              <option value="none">Corte Seco (Nenhuma)</option>
+              <option value="crossfade">Cross Dissolve (Fusão)</option>
+              <option value="zoom-in">Zoom In (Aproximação)</option>
+              <option value="zoom-out">Zoom Out (Afastamento)</option>
+              <option value="whip-right">Whip Pan → (Chicote Direita)</option>
+              <option value="whip-left">← Whip Pan (Chicote Esquerda)</option>
+              <option value="flash">White Flash (Flash Branco)</option>
+            </select>
+          </label>
+          {clip.transition?.type && clip.transition.type !== 'none' && (
+            <InputNumber
+              name="Duração da transição (s)"
+              value={clip.transition?.duration ?? 0.35}
+              min={0.1}
+              max={1.5}
+              step={0.05}
+              onChange={v =>
+                onEditClip(clip.id, {
+                  transition: {
+                    type: clip.transition?.type ?? 'crossfade',
+                    duration: clamp(v, 0.1, 1.5)
+                  }
+                })
+              }
+            />
+          )}
           <button onClick={onSplitClip}>✂ Dividir no playhead</button>
           <button onClick={onFaceReframe}>◉ Reframe por rosto (experimental)</button>
           <button onClick={onAutoZoom}>⚡ Zooms automáticos pelas legendas</button>

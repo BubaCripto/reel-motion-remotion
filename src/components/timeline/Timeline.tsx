@@ -29,6 +29,7 @@ type Props = {
   moveScrub: (e: RPointerEvent<HTMLElement>) => void;
   endScrub: () => void;
   snapLine?: number | null;
+  onSelectMultipleCues?: (ids: string[]) => void;
 };
 
 export const Timeline: React.FC<Props> = ({
@@ -53,10 +54,12 @@ export const Timeline: React.FC<Props> = ({
   startScrub,
   moveScrub,
   endScrub,
-  snapLine = null
+  snapLine = null,
+  onSelectMultipleCues
 }) => {
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState<number | null>(null);
+  const [marquee, setMarquee] = useState<{startX: number; currentX: number; additive: boolean} | null>(null);
 
   const trackRows = useMemo(() => [
     {
@@ -235,7 +238,50 @@ export const Timeline: React.FC<Props> = ({
         {trackRows.map(row => (
           <div className="trackRow" key={row.name}>
             <div className="trackLabel">{row.name}</div>
-            <div className="trackCanvas" style={{width: canvasWidth}}>
+            <div
+              className="trackCanvas"
+              style={{width: canvasWidth}}
+              onPointerDown={e => {
+                if (e.target === e.currentTarget) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  setMarquee({startX: x, currentX: x, additive: e.shiftKey || e.ctrlKey || e.metaKey});
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                }
+              }}
+              onPointerMove={e => {
+                if (marquee) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const currentX = e.clientX - rect.left;
+                  setMarquee(m => (m ? {...m, currentX} : null));
+                  const minX = Math.min(marquee.startX, currentX);
+                  const maxX = Math.max(marquee.startX, currentX);
+                  const minT = minX / zoom;
+                  const maxT = maxX / zoom;
+                  const hitCues = p.cues.filter(c => c.start <= maxT && c.end >= minT).map(c => c.id);
+                  if (onSelectMultipleCues) {
+                    onSelectMultipleCues(
+                      marquee.additive
+                        ? Array.from(new Set([...selectedCueIds, ...hitCues]))
+                        : hitCues
+                    );
+                  }
+                }
+              }}
+              onPointerUp={() => setMarquee(null)}
+              onLostPointerCapture={() => setMarquee(null)}
+            >
+              {marquee && (
+                <div
+                  className="timelineMarquee"
+                  style={{
+                    left: Math.min(marquee.startX, marquee.currentX),
+                    top: 0,
+                    width: Math.max(4, Math.abs(marquee.currentX - marquee.startX)),
+                    height: '100%'
+                  }}
+                />
+              )}
               {row.items.map(item => {
                 const isActive =
                   row.kind === 'cue'

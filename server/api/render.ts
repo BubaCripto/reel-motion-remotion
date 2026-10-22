@@ -36,8 +36,15 @@ export async function handleRender(req:IncomingMessage, res:ServerResponse): Pro
   run(exe, ['render', 'src/remotion/index.ts', 'ReelTypography', out, '--props', file, '--codec', 'h264'], base, (code, msg) => {
     if (job.state !== 'running') return;
     job.state = code === 0 ? 'done' : 'error';
+    job.progress = code === 0 ? 100 : undefined;
     job.message = code === 0 ? 'MP4 pronto' : ('Falha na renderização: ' + msg.slice(-850));
     if (code === 0) job.url = '/renders/' + id + '.mp4';
+  }, (chunk) => {
+    const pctMatch = chunk.match(/([0-9]{1,3})%/);
+    if (pctMatch) {
+      job.progress = Math.min(99, Math.max(1, Number(pctMatch[1])));
+      job.message = `Renderizando MP4: ${job.progress}%`;
+    }
   });
 
   return answer(res, 200, {id, fps: p.fps});

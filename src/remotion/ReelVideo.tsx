@@ -70,7 +70,16 @@ const Caption:React.FC<{cue:Cue;p:ReelProject;index:number;frames:number}>=({cue
  const box=hot&&(cue.highlightMode==='box'||['marker','sticker','highlight-swipe'].includes(preset));
  const color=hot?(box?p.background:(w.accent??accent)):normal;
  const style=motion(activePreset,ease,frame,i,intensity,rand(p.seed+index*5,i));
- return <span key={w.id} style={{display:'inline-block',position:'relative',whiteSpace:'pre',padding:box?'2px 13px':'0 2px',background:box?(w.accent??accent):undefined,color,fontFamily:font(second?(cue.fontB??p.fontB):(cue.fontA??p.fontA)),fontSize:size*(w.scale??1)*(hot?1.09:1),fontWeight:cue.fontWeight??850,fontStyle:cue.italic?'italic':'normal',lineHeight:1.02,letterSpacing:-2,textTransform:preset==='editorial'?'none':'uppercase',WebkitTextStroke:stroke??(hot&&cue.highlightMode==='outline'?`4px ${accent}`:undefined),paintOrder:'stroke fill',textDecoration:hot&&cue.highlightMode==='underline'?'underline':undefined,textDecorationThickness:7,textUnderlineOffset:9,textShadow:'0 4px 8px #0008',...style,transform:`translate(${w.offsetX??0}px,${w.offsetY??0}px) ${style.transform||''}`}}>{w.text}</span>;
+ const fillProgress = interpolate(time, [w.start, w.end], [0, 100], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+ const isWordActive = time >= w.start && time <= w.end;
+ const wordAccent = w.accent ?? accent;
+ const karaokeStyle: React.CSSProperties = cue.karaoke ? {
+   backgroundImage: `linear-gradient(to right, ${wordAccent} ${fillProgress}%, ${normal} ${fillProgress}%)`,
+   WebkitBackgroundClip: 'text',
+   WebkitTextFillColor: 'transparent',
+   color: 'transparent'
+ } : {};
+ return <span key={w.id} style={{display:'inline-block',position:'relative',whiteSpace:'pre',padding:box?'2px 13px':'0 2px',background:box?(w.accent??accent):undefined,color,fontFamily:font(second?(cue.fontB??p.fontB):(cue.fontA??p.fontA)),fontSize:size*(w.scale??1)*(hot||(cue.karaoke&&isWordActive)?1.09:1),fontWeight:cue.fontWeight??850,fontStyle:cue.italic?'italic':'normal',lineHeight:1.02,letterSpacing:-2,textTransform:preset==='editorial'?'none':'uppercase',WebkitTextStroke:stroke??(hot&&cue.highlightMode==='outline'?`4px ${accent}`:undefined),paintOrder:'stroke fill',textDecoration:hot&&cue.highlightMode==='underline'?'underline':undefined,textDecorationThickness:7,textUnderlineOffset:9,textShadow:'0 4px 8px #0008',...style,...karaokeStyle,transform:`translate(${w.offsetX??0}px,${w.offsetY??0}px) ${style.transform||''}`}}>{w.text}</span>;
  })}</div></div></AbsoluteFill>;
 };
 
@@ -96,9 +105,54 @@ const OverlayView:React.FC<{layer:Overlay}>=({layer:l})=>{
 const VideoLayer:React.FC<{clip:VideoClip;p:ReelProject}>=({clip,p})=>{
  const frame=useCurrentFrame(),{fps}=useVideoConfig(),at=clip.start+frame/fps;
  const zoom=animatedValue(clip.keyframes,at,'scale',clip.zoom??1),x=animatedValue(clip.keyframes,at,'x',clip.x??50),y=animatedValue(clip.keyframes,at,'y',clip.y??50);
- // Render frames through the native decoder instead of seeking a browser <video>.
- // OffthreadVideo keeps the HTML video preview, but waits for the exact frame on export.
- return <AbsoluteFill style={{overflow:'hidden'}}><OffthreadVideo src={media(clip.src)} startFrom={Math.round(clip.sourceStart*fps)} playbackRate={clip.speed} muted={clip.muted} pauseWhenBuffering={false} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:`${x}% ${y}%`,transform:`scale(${zoom})`}}/></AbsoluteFill>;
+
+ let transTransform = '';
+ let transOpacity = 1;
+ let flashOpacity = 0;
+
+ if (clip.transition?.type && clip.transition.type !== 'none') {
+   const transFrames = Math.max(1, Math.round((clip.transition.duration ?? 0.35) * fps));
+   const progress = interpolate(frame, [0, transFrames], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+
+   switch (clip.transition.type) {
+     case 'crossfade':
+       transOpacity = progress;
+       break;
+     case 'zoom-in':
+       transTransform = `scale(${0.75 + 0.25 * progress})`;
+       transOpacity = progress;
+       break;
+     case 'zoom-out':
+       transTransform = `scale(${1.3 - 0.3 * progress})`;
+       transOpacity = progress;
+       break;
+     case 'whip-right':
+       transTransform = `translateX(${(1 - progress) * 100}%)`;
+       break;
+     case 'whip-left':
+       transTransform = `translateX(${-(1 - progress) * 100}%)`;
+       break;
+     case 'flash':
+       flashOpacity = interpolate(frame, [0, transFrames * 0.4, transFrames], [0, 0.95, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+       break;
+   }
+ }
+
+ return (
+   <AbsoluteFill style={{overflow:'hidden', opacity: transOpacity, transform: transTransform || undefined}}>
+     <OffthreadVideo
+       src={media(clip.src)}
+       startFrom={Math.round(clip.sourceStart*fps)}
+       playbackRate={clip.speed}
+       muted={clip.muted}
+       pauseWhenBuffering={false}
+       style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:`${x}% ${y}%`,transform:`scale(${zoom})`}}
+     />
+     {flashOpacity > 0 && (
+       <AbsoluteFill style={{background:'#ffffff', opacity: flashOpacity, pointerEvents:'none'}} />
+     )}
+   </AbsoluteFill>
+ );
 };
 
 export const ReelVideo:React.FC<{project:ReelProject}>=({project:p})=>{

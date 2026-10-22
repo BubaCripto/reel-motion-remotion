@@ -13,6 +13,7 @@ fs.mkdirSync(renderDir,{recursive:true});
 export type Job = {
   state: 'running'|'done'|'error';
   message: string;
+  progress?: number;
   url?: string;
   silences?: {start:number;end:number}[];
 };
@@ -36,11 +37,25 @@ export const collect = async (req:IncomingMessage, limit:number): Promise<Buffer
   return Buffer.concat(buffers);
 };
 
-export const run = (bin:string, args:string[], cwd:string, onExit:(code:number,msg:string)=>void) => {
-  const child = spawn(bin, args, {cwd, shell:process.platform==='win32', windowsHide:true});
+export const run = (
+  bin: string,
+  args: string[],
+  cwd: string,
+  onExit: (code: number, msg: string) => void,
+  onData?: (data: string) => void
+) => {
+  const child = spawn(bin, args, {cwd, shell: process.platform === 'win32', windowsHide: true});
   let buffer = '';
-  child.stdout?.on('data', c => buffer = (buffer + c.toString()).slice(-10000));
-  child.stderr?.on('data', c => buffer = (buffer + c.toString()).slice(-10000));
+  child.stdout?.on('data', c => {
+    const text = c.toString();
+    buffer = (buffer + text).slice(-10000);
+    onData?.(text);
+  });
+  child.stderr?.on('data', c => {
+    const text = c.toString();
+    buffer = (buffer + text).slice(-10000);
+    onData?.(text);
+  });
   child.on('error', e => onExit(-1, e.message));
   child.on('close', code => onExit(code ?? 1, buffer));
   return child;

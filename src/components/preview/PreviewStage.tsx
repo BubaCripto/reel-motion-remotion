@@ -37,6 +37,7 @@ type Props = {
   notice: string;
   error: string;
   renderJob: string;
+  jobProgress?: number | null;
   out: string;
 };
 
@@ -71,6 +72,7 @@ export const PreviewStage: React.FC<Props> = ({
   notice,
   error,
   renderJob,
+  jobProgress,
   out
 }) => {
   const playerProps = React.useMemo(() => ({project: p}), [p]);
@@ -204,7 +206,29 @@ export const PreviewStage: React.FC<Props> = ({
 
       {notice && <div className="notice">✓ {notice}</div>}
       {error && <div className="errorBar">⚠ {error}</div>}
-      {renderJob && <div className="statusBar">◌ {renderJob}</div>}
+      {renderJob && (
+        <div className="statusBar" style={{display: 'flex', flexDirection: 'column', gap: 6}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+            <span>◌ {renderJob}</span>
+            {typeof jobProgress === 'number' && (
+              <strong style={{color: '#facc15', fontSize: 11}}>{jobProgress}%</strong>
+            )}
+          </div>
+          {typeof jobProgress === 'number' && (
+            <div style={{width: '100%', height: 5, background: 'rgba(255,255,255,0.12)', borderRadius: 3, overflow: 'hidden'}}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${jobProgress}%`,
+                  background: 'linear-gradient(90deg, #eab308, #22d3ee)',
+                  borderRadius: 3,
+                  transition: 'width 0.25s ease'
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
       {out && (
         <a className="downloadMp4" href={out} download>
           ⬇ Baixar vídeo MP4 finalizado
