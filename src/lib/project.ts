@@ -86,5 +86,30 @@ export function applyStyleToCues(cues: Cue[], targetIds: string[], patch: CueSty
   const targetSet = new Set(targetIds);
   return cues.map(cue => targetSet.has(cue.id) ? { ...cue, ...patch } : cue);
 }
+export const LEFT_PANEL_MIN = 240;
+export const LEFT_PANEL_MAX = 520;
+export const RIGHT_PANEL_MIN = 200;
+export const RIGHT_PANEL_MAX = 420;
+export const MIN_PREVIEW_WIDTH = 380;
+export const RESIZERS_WIDTH = 14;
+
+export function computeInitialPanelWidths(windowWidth?: number): { left: number; right: number } {
+  if (typeof windowWidth !== 'number' || !Number.isFinite(windowWidth)) {
+    return { left: LEFT_PANEL_MAX, right: RIGHT_PANEL_MAX };
+  }
+  const available = windowWidth - MIN_PREVIEW_WIDTH - RESIZERS_WIDTH;
+  const totalMax = LEFT_PANEL_MAX + RIGHT_PANEL_MAX;
+  if (available >= totalMax) {
+    return { left: LEFT_PANEL_MAX, right: RIGHT_PANEL_MAX };
+  }
+  const totalMin = LEFT_PANEL_MIN + RIGHT_PANEL_MIN;
+  const clamped = clamp(available, totalMin, totalMax);
+  const ratio = (clamped - totalMin) / (totalMax - totalMin || 1);
+  return {
+    left: Math.round(LEFT_PANEL_MIN + ratio * (LEFT_PANEL_MAX - LEFT_PANEL_MIN)),
+    right: Math.round(RIGHT_PANEL_MIN + ratio * (RIGHT_PANEL_MAX - RIGHT_PANEL_MIN))
+  };
+}
 import type {RhythmAnalysis,RhythmVariant} from './rhythm';
 import type {TemplateOrigin} from './templates';
+

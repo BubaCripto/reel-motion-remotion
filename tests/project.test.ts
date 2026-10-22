@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initialProject,parseSrt,normalizeWords,splitWords,validateProject,durationFrames,animatedValue,textTokens,applyStyleToCues,isCueStyleKey,type Cue} from '../src/lib/project.ts';
+import {initialProject,parseSrt,normalizeWords,splitWords,validateProject,durationFrames,animatedValue,textTokens,applyStyleToCues,isCueStyleKey,LEFT_PANEL_MIN,LEFT_PANEL_MAX,RIGHT_PANEL_MIN,RIGHT_PANEL_MAX,computeInitialPanelWidths,type Cue} from '../src/lib/project.ts';
 
 test('SRT preserves original timestamps',()=>{
  const s='1\n00:00:00,300 --> 00:00:01,800\nComente [BALEIA] agora\n\n2\n00:00:02,000 --> 00:00:03,750\nPara receber o link';
@@ -69,3 +69,23 @@ test('isCueStyleKey accurately classifies style vs content properties',()=>{
  assert.equal(isCueStyleKey('id'),false);
  assert.equal(isCueStyleKey('words'),false);
 });
+
+test('sidebar panels initialize at maximum expansion by default', ()=>{
+ assert.equal(LEFT_PANEL_MAX, 520);
+ assert.equal(RIGHT_PANEL_MAX, 420);
+ assert.equal(LEFT_PANEL_MIN, 240);
+ assert.equal(RIGHT_PANEL_MIN, 200);
+
+ // Desktop displays >= 1334px always initialize at maximum bounds
+ assert.deepEqual(computeInitialPanelWidths(1920), { left: 520, right: 420 });
+ assert.deepEqual(computeInitialPanelWidths(1440), { left: 520, right: 420 });
+ assert.deepEqual(computeInitialPanelWidths(1366), { left: 520, right: 420 });
+ assert.deepEqual(computeInitialPanelWidths(undefined), { left: 520, right: 420 });
+
+ // Smaller screens (e.g. 1280px) adjust gracefully without crushing preview
+ const compact = computeInitialPanelWidths(1280);
+ assert.ok(compact.left <= LEFT_PANEL_MAX && compact.left >= LEFT_PANEL_MIN);
+ assert.ok(compact.right <= RIGHT_PANEL_MAX && compact.right >= RIGHT_PANEL_MIN);
+ assert.ok(1280 - compact.left - compact.right - 14 >= 380);
+});
+

@@ -1,5 +1,5 @@
 /* Responsive editor overrides. Kept separate so the original visual theme remains intact. */
-.studioV6{min-height:100dvh;display:flex;flex-direction:column;--left-panel:326px;--right-panel:240px;--timeline-height:330px}
+.studioV6{min-height:100dvh;display:flex;flex-direction:column;--left-panel:520px;--right-panel:420px;--timeline-height:330px}
 .editorGrid{grid-template-columns:var(--left-panel) 7px minmax(360px,1fr) 7px var(--right-panel);flex:1;min-height:0;overflow:hidden}
 .leftPanel,.rightPanel{overflow-y:auto}.leftPanel{min-width:0}
 .panelResizer{background:#24262e;position:relative;z-index:20;transition:background .12s}.panelResizer:hover{background:#d8b15e}.panelResizer.vertical{cursor:col-resize}.panelResizer.horizontal{height:7px;flex:0 0 7px;cursor:row-resize;border-top:1px solid #33353e;border-bottom:1px solid #33353e}
