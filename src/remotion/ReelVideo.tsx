@@ -1,6 +1,21 @@
 import React from 'react';
 import {AbsoluteFill,Audio,OffthreadVideo,Img,Sequence,interpolate,spring,staticFile,useCurrentFrame,useVideoConfig} from 'remotion';
 import {animatedValue,clamp,normalizeWords,textTokens,type Cue,type ReelProject,type Overlay,type Preset,type VideoClip} from '../lib/project';
+import {
+  KineticTypography,
+  SvgStrokePath,
+  BurstParticles,
+  SpeedLinesOverlay,
+  CameraShakeWrapper,
+  GrowthGraphScene,
+  TargetLockScene,
+  RocketLaunchScene,
+  StampImpactScene,
+  HazardWarningScene,
+  HourglassScene,
+  SpeedGaugeScene,
+  NeuralBrainScene
+} from './motion';
 import {loadFont as loadAnton} from '@remotion/google-fonts/Anton';
 import {loadFont as loadPlayfair} from '@remotion/google-fonts/PlayfairDisplay';
 import {loadFont as loadMontserrat} from '@remotion/google-fonts/Montserrat';
@@ -99,6 +114,42 @@ const OverlayView:React.FC<{layer:Overlay}>=({layer:l})=>{
  if(l.kind==='effect'&&l.type==='zoom-pulse')return null;
  if(l.type==='scribble')return <AbsoluteFill><svg style={{position:'absolute',left:`${x}%`,top:`${y}%`,width:`${scale*500}px`,height:`${scale*200}px`,transform:`translate(-50%,-50%) rotate(${rotate}deg)`,opacity:opacity}} viewBox="0 0 500 200"><path d="M42 105 C88 8 433 8 457 103 C489 190 55 207 42 105" fill="none" stroke={l.color??'#eac34b'} strokeWidth={l.strokeWidth??12} strokeLinecap="round" strokeDasharray="1150" strokeDashoffset={1150*(1-intro)}/></svg></AbsoluteFill>;
  if(l.type==='arrow'||l.type==='line')return <AbsoluteFill><svg style={{position:'absolute',left:`${x}%`,top:`${y}%`,transform:`translate(-50%,-50%) rotate(${rotate}deg) scale(${scale})`,opacity:opacity}} width="460" height="160"><path d={l.type==='arrow'?'M25 80 L410 80 M365 35 L418 80 L365 125':'M15 80 L440 80'} stroke={l.color??'#efc35b'} strokeWidth={l.strokeWidth??10} strokeLinecap="round" strokeLinejoin="round" fill="none" strokeDasharray="560" strokeDashoffset={560*(1-intro)}/></svg></AbsoluteFill>;
+ if(l.kind==='motion'){
+  const props=l.motionProps||{};
+  let content:React.ReactNode=null;
+  switch(l.motionType){
+   case 'kinetic-text':
+    content=<KineticTypography text={l.text||props.text||l.name} motionStyle={props.style??'3d-tilt'} accent={props.accent??l.color??'#ffe043'} color={props.color??'#ffffff'} fontA={props.fontA??l.fontA??'Anton'} outline={props.outline??true} backdropWord={props.backdropWord} fontSize={props.fontSize??110} align={props.align??'center'} fps={fps} frame={frame}/>;
+    break;
+   case 'stroke-path':
+    content=<SvgStrokePath shape={props.shape||(l.type as any)||'curved-arrow'} color={l.color||props.color||'#ffe043'} strokeWidth={l.strokeWidth||props.strokeWidth||10} angle={props.angle||l.rotation||0} scale={scale} fps={fps} frame={frame}/>;
+    break;
+   case 'burst':
+    content=<BurstParticles count={props.count||12} colors={props.colors||[l.color||'#ffe043','#ff0055','#00f0ff','#ffffff']} radius={props.radius||240} shape={props.shape||'spark'} fps={fps} frame={frame}/>;
+    break;
+   case 'speed-lines':
+    return <SpeedLinesOverlay count={props.count||24} color={l.color||props.color||'rgba(255, 255, 255, 0.35)'} intensity={props.intensity||1} frame={frame} fps={fps}/>;
+   case 'camera-shake':
+    return null;
+   case 'scene':
+   default:{
+    const scene=props.scene||'growth-graph';
+    switch(scene){
+     case 'growth-graph':content=<GrowthGraphScene label={props.label} metric={props.metric} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'target-lock':content=<TargetLockScene label={props.label} coordinates={props.coordinates} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'rocket-launch':content=<RocketLaunchScene color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'stamp-impact':content=<StampImpactScene text={props.text||l.text} color={l.color||props.color} subtext={props.subtext} fps={fps} frame={frame}/>;break;
+     case 'hazard-warning':content=<HazardWarningScene label={props.label||l.text} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'hourglass':content=<HourglassScene label={props.label} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'speed-gauge':content=<SpeedGaugeScene label={props.label} speedText={props.speedText} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'neural-brain':content=<NeuralBrainScene label={props.label} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     default:content=<GrowthGraphScene label={props.label} metric={props.metric} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+    }
+    break;
+   }
+  }
+  return <AbsoluteFill style={{pointerEvents:'none'}}><div style={{position:'absolute',left:`${x}%`,top:`${y}%`,transform:`translate(-50%,-50%) rotate(${rotate}deg) scale(${scale})`,opacity:opacity*outro,pointerEvents:'none'}}>{content}</div></AbsoluteFill>;
+ }
  return <AbsoluteFill><div style={{...style,width:l.type==='circle'?280:450,height:l.type==='circle'?280:125,background:l.color??'#e7bf57',borderRadius:l.type==='circle'?'50%':12,boxShadow:'0 12px 30px #0004'}}/></AbsoluteFill>;
 };
 
@@ -156,15 +207,31 @@ const VideoLayer:React.FC<{clip:VideoClip;p:ReelProject}>=({clip,p})=>{
 };
 
 export const ReelVideo:React.FC<{project:ReelProject}>=({project:p})=>{
+ const frame=useCurrentFrame();
  const legacy=!p.clips?.length&&p.videoSrc;
  const layers=[...(p.overlays??[])].sort((a,b)=>a.track-b.track),isBroll=(l:Overlay)=>l.kind==='video'||l.mediaRole==='broll';
  const renderLayer=(layer:Overlay)=><Sequence key={layer.id} premountFor={p.fps} from={Math.max(0,Math.round(layer.start*p.fps))} durationInFrames={Math.max(1,Math.round((layer.end-layer.start)*p.fps))}><OverlayView layer={layer}/></Sequence>;
- return <AbsoluteFill style={{background:p.transparent?'transparent':p.background}}>
- {p.fonts?.map(f=><style key={f.name}>{`@font-face{font-family:'${f.name.replace(/['"<>]/g,'')}';src:url('${media(f.src)}');font-display:block;}`}</style>)}
- {legacy&&<OffthreadVideo src={media(p.videoSrc)} pauseWhenBuffering={false} style={{width:'100%',height:'100%',objectFit:'cover'}}/>}
- {p.clips?.map(clip=><Sequence key={clip.id} from={Math.round(clip.start*p.fps)} durationInFrames={Math.max(1,Math.round((clip.end-clip.start)*p.fps))}><VideoLayer clip={clip} p={p}/></Sequence>)}
- {layers.filter(isBroll).map(renderLayer)}
- {p.cues.map((c,i)=><Sequence key={c.id} from={Math.max(0,Math.round(c.start*p.fps))} durationInFrames={Math.max(1,Math.round((c.end-c.start)*p.fps))}><Caption cue={c} p={p} index={i} frames={Math.max(1,Math.round((c.end-c.start)*p.fps))}/></Sequence>)}
- {layers.filter(l=>!isBroll(l)).map(renderLayer)}
- </AbsoluteFill>;
+
+ const now=frame/p.fps;
+ const activeShake=layers.find(l=>l.kind==='motion'&&(l.motionType==='camera-shake'||l.motionProps?.cameraShake)&&now>=l.start&&now<=l.end);
+ const shakeFrame=activeShake?Math.round((now-activeShake.start)*p.fps):0;
+ const shakeDecay=activeShake?Math.max(1,Math.round((activeShake.end-activeShake.start)*p.fps)):10;
+ const shakeIntensity=activeShake?.motionProps?.intensity??16;
+
+ const content=(
+  <AbsoluteFill style={{background:p.transparent?'transparent':p.background}}>
+  {p.fonts?.map(f=><style key={f.name}>{`@font-face{font-family:'${f.name.replace(/['"<>]/g,'')}';src:url('${media(f.src)}');font-display:block;}`}</style>)}
+  {legacy&&<OffthreadVideo src={media(p.videoSrc)} pauseWhenBuffering={false} style={{width:'100%',height:'100%',objectFit:'cover'}}/>}
+  {p.clips?.map(clip=><Sequence key={clip.id} from={Math.round(clip.start*p.fps)} durationInFrames={Math.max(1,Math.round((clip.end-clip.start)*p.fps))}><VideoLayer clip={clip} p={p}/></Sequence>)}
+  {layers.filter(isBroll).map(renderLayer)}
+  {p.cues.map((c,i)=><Sequence key={c.id} from={Math.max(0,Math.round(c.start*p.fps))} durationInFrames={Math.max(1,Math.round((c.end-c.start)*p.fps))}><Caption cue={c} p={p} index={i} frames={Math.max(1,Math.round((c.end-c.start)*p.fps))}/></Sequence>)}
+  {layers.filter(l=>!isBroll(l)).map(renderLayer)}
+  </AbsoluteFill>
+ );
+
+ return activeShake?(
+  <CameraShakeWrapper frame={shakeFrame} intensity={shakeIntensity} decayFrames={shakeDecay}>
+   {content}
+  </CameraShakeWrapper>
+ ):content;
 };
