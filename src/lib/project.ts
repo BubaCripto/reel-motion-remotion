@@ -71,5 +71,20 @@ export function replaceTranscript(project:ReelProject,incoming:Cue[]):ReelProjec
 }
 export function animatedValue(k:Keyframe[]|undefined,time:number,property:keyof Pick<Keyframe,'x'|'y'|'scale'|'rotate'|'opacity'>,fallback:number){const list=(k||[]).filter(v=>typeof v[property]==='number').sort((a,b)=>a.time-b.time);if(!list.length)return fallback;if(time<=list[0].time)return list[0][property] as number;for(let i=1;i<list.length;i++){if(time<=list[i].time){const a=list[i-1],b=list[i],t=clamp((time-a.time)/(b.time-a.time||1),0,1),e=t*t*(3-2*t);return (a[property] as number)*(1-e)+(b[property] as number)*e;}}return list[list.length-1][property] as number;}
 export const seconds=(v:number)=>Math.max(0,v).toFixed(2)+'s';
+export const CUE_STYLE_KEYS = [
+  'preset','fontA','fontB','twoFonts','fontWeight','italic',
+  'align','highlightMode','foreground','accent','strokeWidth',
+  'strokeColor','scale','x','y','rotation','opacity','animationSpeed','outlineFill'
+] as const;
+export type CueStyleKey = typeof CUE_STYLE_KEYS[number];
+export type CueStylePatch = Partial<Pick<Cue, CueStyleKey>>;
+export function isCueStyleKey(key: string): key is CueStyleKey {
+  return (CUE_STYLE_KEYS as readonly string[]).includes(key);
+}
+export function applyStyleToCues(cues: Cue[], targetIds: string[], patch: CueStylePatch): Cue[] {
+  if (!targetIds.length || !Object.keys(patch).length) return cues;
+  const targetSet = new Set(targetIds);
+  return cues.map(cue => targetSet.has(cue.id) ? { ...cue, ...patch } : cue);
+}
 import type {RhythmAnalysis,RhythmVariant} from './rhythm';
 import type {TemplateOrigin} from './templates';
