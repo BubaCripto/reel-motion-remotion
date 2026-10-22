@@ -1,10 +1,10 @@
-import React, {useMemo, type PointerEvent as RPointerEvent} from 'react';
+import React, {useMemo, useState, type PointerEvent as RPointerEvent} from 'react';
 import type {Cue, ReelProject} from '../../lib/project';
 import {cueTracks, normalizeWords} from '../../lib/project';
 import {rhythmSignature} from '../../lib/rhythm';
 import {RhythmMarkers} from '../../features/rhythm/RhythmPanel';
 import {TimelineClip} from './TimelineClip';
-import type {Drag, Selection} from '../../types/editor';
+import {formatTimecode, type Drag, type Selection} from '../../types/editor';
 
 type Props = {
   project: ReelProject;
@@ -28,6 +28,7 @@ type Props = {
   startScrub: (e: RPointerEvent<HTMLElement>) => void;
   moveScrub: (e: RPointerEvent<HTMLElement>) => void;
   endScrub: () => void;
+  snapLine?: number | null;
 };
 
 export const Timeline: React.FC<Props> = ({
@@ -51,48 +52,100 @@ export const Timeline: React.FC<Props> = ({
   wordExpanded,
   startScrub,
   moveScrub,
-  endScrub
+  endScrub,
+  snapLine = null
 }) => {
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const [hoverX, setHoverX] = useState<number | null>(null);
+
   const trackRows = useMemo(() => [
     {
       name: '🎞 VÍDEO',
       kind: 'clip',
-      items: p.clips.map(c => ({id: c.id, start: c.start, end: c.end, label: 'Corte ' + c.src.split('/').pop()?.slice(0, 7)}))
+      items: p.clips.map(c => ({
+        id: c.id,
+        start: c.start,
+        end: c.end,
+        label: 'Corte ' + c.src.split('/').pop()?.slice(0, 7),
+        src: c.src,
+        sourceStart: c.sourceStart,
+        speed: c.speed,
+        waveformColor: '#38bdf8'
+      }))
     },
     {
       name: '💬 LEGENDAS GERADAS',
       kind: 'cue',
-      items: cueTracks(p.cues).captions.map(c => ({id: c.id, start: c.start, end: c.end, label: c.text.replace(/[\[\]]/g, '')}))
+      items: cueTracks(p.cues).captions.map(c => ({
+        id: c.id,
+        start: c.start,
+        end: c.end,
+        label: c.text.replace(/[\[\]]/g, '')
+      }))
     },
     {
       name: 'T TEXTOS MANUAIS / ESTILOS',
       kind: 'cue',
-      items: cueTracks(p.cues).texts.map(c => ({id: c.id, start: c.start, end: c.end, label: c.text.replace(/[\[\]]/g, '')}))
+      items: cueTracks(p.cues).texts.map(c => ({
+        id: c.id,
+        start: c.start,
+        end: c.end,
+        label: c.text.replace(/[\[\]]/g, '')
+      }))
     },
     {
       name: '🔤 PALAVRAS DA LEGENDA',
       kind: 'word',
-      items: wordExpanded && cue ? normalizeWords(cue).map(w => ({id: w.id, start: w.start, end: w.end, label: w.text})) : []
+      items: wordExpanded && cue ? normalizeWords(cue).map(w => ({
+        id: w.id,
+        start: w.start,
+        end: w.end,
+        label: w.text
+      })) : []
     },
     {
       name: '🎬 B-ROLL',
       kind: 'overlay',
-      items: p.overlays.filter(o => o.kind === 'video' || o.mediaRole === 'broll').map(o => ({id: o.id, start: o.start, end: o.end, label: o.name}))
+      items: p.overlays.filter(o => o.kind === 'video' || o.mediaRole === 'broll').map(o => ({
+        id: o.id,
+        start: o.start,
+        end: o.end,
+        label: o.name,
+        src: o.src,
+        waveformColor: '#fbbf24'
+      }))
     },
     {
       name: '🧩 ELEMENTOS LIVRES',
       kind: 'overlay',
-      items: p.overlays.filter(o => o.mediaRole !== 'broll' && (o.kind === 'shape' || o.kind === 'image' || o.kind === 'text')).map(o => ({id: o.id, start: o.start, end: o.end, label: o.name}))
+      items: p.overlays.filter(o => o.mediaRole !== 'broll' && (o.kind === 'shape' || o.kind === 'image' || o.kind === 'text')).map(o => ({
+        id: o.id,
+        start: o.start,
+        end: o.end,
+        label: o.name
+      }))
     },
     {
       name: '✨ EFEITOS',
       kind: 'overlay',
-      items: p.overlays.filter(o => o.kind === 'effect').map(o => ({id: o.id, start: o.start, end: o.end, label: o.name}))
+      items: p.overlays.filter(o => o.kind === 'effect').map(o => ({
+        id: o.id,
+        start: o.start,
+        end: o.end,
+        label: o.name
+      }))
     },
     {
       name: '🔊 ÁUDIO',
       kind: 'overlay',
-      items: p.overlays.filter(o => o.kind === 'audio').map(o => ({id: o.id, start: o.start, end: o.end, label: o.name}))
+      items: p.overlays.filter(o => o.kind === 'audio').map(o => ({
+        id: o.id,
+        start: o.start,
+        end: o.end,
+        label: o.name,
+        src: o.src,
+        waveformColor: '#34d399'
+      }))
     }
   ], [p, wordExpanded, cue]);
 
@@ -103,7 +156,7 @@ export const Timeline: React.FC<Props> = ({
       <div className="timelineToolbar">
         <div>
           <b>TIMELINE MULTICAMADAS</b>
-          <span> Arraste blocos e bordas para editar com precisão de frames</span>
+          <span> Arraste blocos e bordas para editar com precisão de frames · Zoom: Ctrl + Roda do Mouse</span>
         </div>
         <div>
           <button onClick={() => onSeek(0)}>⏮</button>
@@ -124,7 +177,17 @@ export const Timeline: React.FC<Props> = ({
         </div>
       </div>
 
-      <div className="timelineScroll" ref={timelineRef}>
+      <div
+        className="timelineScroll"
+        ref={timelineRef}
+        onWheel={e => {
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 12 : -12;
+            onSetZoom(Math.max(30, Math.min(240, zoom + delta)));
+          }
+        }}
+      >
         <div className="rulerLine">
           <div className="trackLabel">TEMPO</div>
           <div
@@ -134,12 +197,28 @@ export const Timeline: React.FC<Props> = ({
               const rect = e.currentTarget.getBoundingClientRect();
               onSeek((e.clientX - rect.left) / zoom);
             }}
+            onPointerMove={e => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              setHoverX(x);
+              setHoverTime(Math.max(0, x / zoom));
+            }}
+            onPointerLeave={() => {
+              setHoverX(null);
+              setHoverTime(null);
+            }}
           >
             {Array.from({length: Math.ceil(duration) + 1}, (_, i) => (
               <span key={i} style={{left: i * zoom}}>
                 {i}s
               </span>
             ))}
+
+            {hoverX !== null && hoverTime !== null && (
+              <div className="rulerHoverTooltip" style={{left: hoverX}}>
+                ⏱ {formatTimecode(hoverTime, p.fps)}
+              </div>
+            )}
           </div>
         </div>
 
@@ -174,6 +253,10 @@ export const Timeline: React.FC<Props> = ({
                     text={item.label || ''}
                     active={isActive}
                     zoom={zoom}
+                    src={(item as any).src}
+                    sourceStart={(item as any).sourceStart}
+                    speed={(item as any).speed}
+                    waveformColor={(item as any).waveformColor}
                     onDown={onDown}
                     onMove={onMove}
                     onEnd={onEnd}
@@ -189,6 +272,15 @@ export const Timeline: React.FC<Props> = ({
                   />
                 );
               })}
+
+              {/* Visual Magnetic Snap Guide Line */}
+              {snapLine !== null && (
+                <div className="snapGuideLine" style={{left: snapLine * zoom}}>
+                  <span className="snapGuideBadge">🧲 {formatTimecode(snapLine, p.fps)}</span>
+                </div>
+              )}
+
+              {/* Playhead Cursor */}
               <div
                 className="cursorLine"
                 aria-label="Arraste para mover o playhead"
@@ -197,7 +289,9 @@ export const Timeline: React.FC<Props> = ({
                 onPointerMove={moveScrub}
                 onPointerUp={endScrub}
                 onLostPointerCapture={endScrub}
-              />
+              >
+                <span className="cursorTimeBadge">{formatTimecode(cursor, p.fps)}</span>
+              </div>
             </div>
           </div>
         ))}

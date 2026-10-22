@@ -11,3 +11,63 @@
 .cursorLine{width:13px!important;margin-left:-6px;border-left:2px solid #ff6663;pointer-events:auto!important;cursor:ew-resize;touch-action:none}.cursorLine:hover{border-left-color:#fff;filter:drop-shadow(0 0 3px #ff6663)}
 @media(max-width:1180px){.editorGrid{grid-template-columns:280px 7px minmax(300px,1fr)}.editorGrid>.panelResizer:nth-of-type(2),.rightPanel{display:none}.previewFrame{height:min(100%,calc(100dvh - var(--timeline-height) - 155px))}}
 @media(max-width:680px){.studioV6{display:block}.editorGrid{display:flex;flex-direction:column;overflow:visible}.panelResizer{display:none!important}.leftPanel,.rightPanel{max-height:none}.rightPanel{display:block}.previewFrame{height:min(70vh,620px)}.timelineSection{height:auto;min-height:260px}}
+
+/* Phase 2: Timeline Pro - Waveform, Visual Snap Guide, and Tooltip */
+.snapGuideLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #facc15;
+  box-shadow: 0 0 8px #facc15, 0 0 16px rgba(250, 204, 21, 0.6);
+  pointer-events: none;
+  z-index: 100;
+}
+.snapGuideBadge {
+  position: sticky;
+  top: 4px;
+  left: 6px;
+  background: #eab308;
+  color: #111;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+.rulerHoverTooltip {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  background: #18191f;
+  color: #f6d780;
+  border: 1px solid #755d30;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 50;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+.cursorTimeBadge {
+  position: absolute;
+  bottom: 2px;
+  left: 6px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0.85;
+}
+.timelineClip .clipLabel {
+  position: relative;
+  z-index: 1;
+}
+

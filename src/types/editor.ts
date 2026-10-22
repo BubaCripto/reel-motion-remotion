@@ -52,3 +52,16 @@ export const categories = [
 ];
 
 export const labelName = (s: string) => s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+export function formatTimecode(sec: number, fps = 30): string {
+  if (isNaN(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  const ms = Math.floor((sec % 1) * 1000);
+  const f = Math.floor((sec % 1) * fps);
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  const mss = String(ms).padStart(3, '0');
+  return `${mm}:${ss}.${mss} (F:${f})`;
+}
+

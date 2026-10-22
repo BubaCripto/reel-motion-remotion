@@ -95,6 +95,7 @@ function ProjectStudio() {
   const [safeZone, setSafeZone] = useState(true);
   const [safeTarget, setSafeTarget] = useState<'reels' | 'post'>('reels');
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [snapLine, setSnapLine] = useState<number | null>(null);
 
   const [initialPanelWidths] = useState(() => computeInitialPanelWidths(typeof window !== 'undefined' ? window.innerWidth : undefined));
   const [leftWidth, setLeftWidth] = useState(initialPanelWidths.left);
@@ -967,24 +968,44 @@ function ProjectStudio() {
     let start = Math.max(0, c.start + (d.mode === 'end' ? 0 : delta));
     let end = Math.max(start + 1 / fps, c.end + (d.mode === 'start' ? 0 : delta));
 
+    let didSnap = false;
+    let snapTarget = 0;
     if (snapEnabled) {
-      const threshold = 9 / zoom;
-      const marks = [0, duration, ...p.clips.filter(v => v.id !== d.id).flatMap(v => [v.start, v.end]), ...p.cues.filter(v => v.id !== d.id).flatMap(v => [v.start, v.end]), ...p.overlays.filter(v => v.id !== d.id).flatMap(v => [v.start, v.end])];
+      const threshold = 10 / zoom;
+      const marks = [
+        0,
+        duration,
+        cursor,
+        ...p.clips.filter(v => v.id !== d.id).flatMap(v => [v.start, v.end]),
+        ...p.cues.filter(v => v.id !== d.id).flatMap(v => [v.start, v.end]),
+        ...p.overlays.filter(v => v.id !== d.id).flatMap(v => [v.start, v.end])
+      ];
       const snap = (v: number) => marks.reduce((best, m) => (Math.abs(m - v) < Math.abs(best - v) ? m : best), v);
       if (d.mode === 'move') {
         const target = snap(start);
         if (Math.abs(target - start) <= threshold) {
           end += target - start;
           start = target;
+          didSnap = true;
+          snapTarget = target;
         }
       } else if (d.mode === 'start') {
         const target = snap(start);
-        if (Math.abs(target - start) <= threshold) start = target;
+        if (Math.abs(target - start) <= threshold) {
+          start = target;
+          didSnap = true;
+          snapTarget = target;
+        }
       } else {
         const target = snap(end);
-        if (Math.abs(target - end) <= threshold) end = target;
+        if (Math.abs(target - end) <= threshold) {
+          end = target;
+          didSnap = true;
+          snapTarget = target;
+        }
       }
     }
+    setSnapLine(didSnap ? snapTarget : null);
     const update = d.mode === 'move' ? {start, end} : d.mode === 'start' ? {start: Math.min(c.end - 1 / fps, start)} : {end};
     if (d.kind === 'cue') editCue(d.id, update, false);
     if (d.kind === 'overlay') editLayer(d.id, update, false);
@@ -997,6 +1018,7 @@ function ProjectStudio() {
   };
 
   const onPointerEnd = () => {
+    setSnapLine(null);
     drag.current = null;
     posDrag.current = null;
     captionPreviewOrigins.current = null;
@@ -1713,6 +1735,7 @@ function ProjectStudio() {
         startScrub={startScrub}
         moveScrub={moveScrub}
         endScrub={endScrub}
+        snapLine={snapLine}
       />
     </div>
   );
