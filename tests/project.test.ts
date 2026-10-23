@@ -124,4 +124,16 @@ test('createBlankProject starts with empty timeline and valid dimensions', () =>
   assert.equal(durationFrames(p), Math.ceil(15.5 * p.fps));
 });
 
+test('timeline lane controls survive JSON validation without changing authored media', () => {
+  const project = createBlankProject('Trilhas', {
+    trackSettings: {captions: {hidden: true, locked: true}, audio: {muted: true, solo: true}},
+    trackOrder: ['audio', 'video', 'captions', 'texts', 'words', 'motion', 'broll', 'elements', 'effects']
+  });
+  const restored = validateProject(JSON.parse(JSON.stringify(project)));
+  assert.deepEqual(restored.trackSettings, project.trackSettings);
+  assert.deepEqual(restored.trackOrder, project.trackOrder);
+  assert.equal(restored.cues.length, 0);
+  assert.equal(restored.clips.length, 0);
+});
+
 

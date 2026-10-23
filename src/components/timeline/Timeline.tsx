@@ -1,5 +1,5 @@
 import React, {useMemo, useState, type PointerEvent as RPointerEvent} from 'react';
-import type {Cue, ReelProject} from '../../lib/project';
+import type {Cue, ReelProject, TimelineTrackId, TrackSettings} from '../../lib/project';
 import {cueTracks, normalizeWords} from '../../lib/project';
 import {rhythmSignature} from '../../lib/rhythm';
 import {RhythmMarkers} from '../../features/rhythm/RhythmPanel';
@@ -30,6 +30,8 @@ type Props = {
   endScrub: () => void;
   snapLine?: number | null;
   onSelectMultipleCues?: (ids: string[]) => void;
+  onUpdateTrack: (id: TimelineTrackId, patch: NonNullable<TrackSettings[TimelineTrackId]>) => void;
+  onMoveTrack: (id: TimelineTrackId, direction: -1 | 1) => void;
 };
 
 export const Timeline: React.FC<Props> = ({
@@ -55,14 +57,16 @@ export const Timeline: React.FC<Props> = ({
   moveScrub,
   endScrub,
   snapLine = null,
-  onSelectMultipleCues
+  onSelectMultipleCues,
+  onUpdateTrack,
+  onMoveTrack
 }) => {
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState<number | null>(null);
   const [marquee, setMarquee] = useState<{startX: number; currentX: number; additive: boolean} | null>(null);
-
   const trackRows = useMemo(() => [
     {
+      id: 'video' as const,
       name: '🎞 VÍDEO',
       kind: 'clip',
       items: p.clips.map(c => ({
@@ -77,6 +81,7 @@ export const Timeline: React.FC<Props> = ({
       }))
     },
     {
+      id: 'captions' as const,
       name: '💬 LEGENDAS GERADAS',
       kind: 'cue',
       items: cueTracks(p.cues).captions.map(c => ({
@@ -87,6 +92,7 @@ export const Timeline: React.FC<Props> = ({
       }))
     },
     {
+      id: 'texts' as const,
       name: 'T TEXTOS MANUAIS / ESTILOS',
       kind: 'cue',
       items: cueTracks(p.cues).texts.map(c => ({
@@ -97,6 +103,7 @@ export const Timeline: React.FC<Props> = ({
       }))
     },
     {
+      id: 'words' as const,
       name: '🔤 PALAVRAS DA LEGENDA',
       kind: 'word',
       items: wordExpanded && cue ? normalizeWords(cue).map(w => ({
@@ -107,6 +114,7 @@ export const Timeline: React.FC<Props> = ({
       })) : []
     },
     {
+      id: 'motion' as const,
       name: '⚡ MOTION GRAPHICS',
       kind: 'overlay',
       items: p.overlays.filter(o => o.kind === 'motion').map(o => {
@@ -135,6 +143,7 @@ export const Timeline: React.FC<Props> = ({
       })
     },
     {
+      id: 'broll' as const,
       name: '🎬 B-ROLL',
       kind: 'overlay',
       items: p.overlays.filter(o => o.kind === 'video' || o.mediaRole === 'broll').map(o => ({
@@ -147,6 +156,7 @@ export const Timeline: React.FC<Props> = ({
       }))
     },
     {
+      id: 'elements' as const,
       name: '🧩 ELEMENTOS LIVRES',
       kind: 'overlay',
       items: p.overlays.filter(o => o.mediaRole !== 'broll' && (o.kind === 'shape' || o.kind === 'image' || o.kind === 'text')).map(o => ({
@@ -157,6 +167,7 @@ export const Timeline: React.FC<Props> = ({
       }))
     },
     {
+      id: 'effects' as const,
       name: '✨ EFEITOS',
       kind: 'overlay',
       items: p.overlays.filter(o => o.kind === 'effect').map(o => ({
@@ -167,6 +178,7 @@ export const Timeline: React.FC<Props> = ({
       }))
     },
     {
+      id: 'audio' as const,
       name: '🔊 ÁUDIO',
       kind: 'overlay',
       items: p.overlays.filter(o => o.kind === 'audio').map(o => ({
@@ -181,6 +193,13 @@ export const Timeline: React.FC<Props> = ({
   ], [p, wordExpanded, cue]);
 
   const canvasWidth = Math.max(1100, (duration + 1) * zoom);
+  const orderedRows = useMemo(() => {
+    const order = p.trackOrder?.length ? p.trackOrder : trackRows.map(row => row.id);
+    return [...trackRows].sort((a, b) => {
+      const ai = order.indexOf(a.id), bi = order.indexOf(b.id);
+      return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+    });
+  }, [p.trackOrder, trackRows]);
 
   return (
     <section className="timelineSection">
@@ -263,10 +282,32 @@ export const Timeline: React.FC<Props> = ({
           />
         )}
 
-        {trackRows.map(row => (
+        {orderedRows.map((row, rowIndex) => {
+          const settings = p.trackSettings?.[row.id] ?? {};
+          const collapsed = !!settings.collapsed;
+          const isAudioLane = row.id === 'audio' || row.id === 'video';
+          return (
           <div className="trackRow" key={row.name}>
-            <div className="trackLabel">{row.name}</div>
-            <div
+            <div className="trackLabel trackLabelWithControl">
+              <div className="trackTitle">
+                <span>{row.name}</span>
+              </div>
+              <div className="trackActions" onPointerDown={e => e.stopPropagation()}>
+                <button
+                  className="trackCollapse"
+                  title={collapsed ? 'Expandir trilha' : 'Recolher trilha'}
+                  aria-label={`${collapsed ? 'Expandir' : 'Recolher'} ${row.name}`}
+                  onClick={() => onUpdateTrack(row.id, {...settings, collapsed: !collapsed})}
+                >{collapsed ? '›' : '⌄'}</button>
+                <button title={settings.hidden ? 'Mostrar no preview e exportação' : 'Ocultar do preview e exportação'} onClick={() => onUpdateTrack(row.id, {...settings, hidden: !settings.hidden})}>{settings.hidden ? '◌' : '◉'}</button>
+                <button title={settings.locked ? 'Desbloquear edição' : 'Bloquear edição'} onClick={() => onUpdateTrack(row.id, {...settings, locked: !settings.locked})}>{settings.locked ? '🔒' : '🔓'}</button>
+                {isAudioLane && <button title={settings.muted ? 'Ativar áudio da trilha' : 'Silenciar áudio da trilha'} onClick={() => onUpdateTrack(row.id, {...settings, muted: !settings.muted})}>{settings.muted ? '🔇' : '🔊'}</button>}
+                <button title={settings.solo ? 'Desativar solo' : 'Ouvir/ver somente esta trilha'} onClick={() => onUpdateTrack(row.id, {...settings, solo: !settings.solo})}>{settings.solo ? 'S' : 's'}</button>
+                <button disabled={rowIndex === 0} title="Mover trilha para cima" onClick={() => onMoveTrack(row.id, -1)}>↑</button>
+                <button disabled={rowIndex === orderedRows.length - 1} title="Mover trilha para baixo" onClick={() => onMoveTrack(row.id, 1)}>↓</button>
+              </div>
+            </div>
+            {!collapsed && <div
               className="trackCanvas"
               style={{width: canvasWidth}}
               onPointerDown={e => {
@@ -286,8 +327,12 @@ export const Timeline: React.FC<Props> = ({
                   const maxX = Math.max(marquee.startX, currentX);
                   const minT = minX / zoom;
                   const maxT = maxX / zoom;
-                  const hitCues = p.cues.filter(c => c.start <= maxT && c.end >= minT).map(c => c.id);
-                  if (onSelectMultipleCues) {
+                  // Marquee selection is scoped to the authored/generated text lane
+                  // where it started; dragging over video or motion cannot select text.
+                  const hitCues = row.kind === 'cue'
+                    ? row.items.filter(item => item.start <= maxT && item.end >= minT).map(item => item.id)
+                    : [];
+                  if (row.kind === 'cue' && onSelectMultipleCues) {
                     onSelectMultipleCues(
                       marquee.additive
                         ? Array.from(new Set([...selectedCueIds, ...hitCues]))
@@ -332,6 +377,7 @@ export const Timeline: React.FC<Props> = ({
                     speed={(item as any).speed}
                     waveformColor={(item as any).waveformColor}
                     subKind={(item as any).subKind}
+                    locked={!!settings.locked}
                     onDown={onDown}
                     onMove={onMove}
                     onEnd={onEnd}
@@ -368,9 +414,9 @@ export const Timeline: React.FC<Props> = ({
               >
                 <span className="cursorTimeBadge">{formatTimecode(cursor, p.fps)}</span>
               </div>
-            </div>
+            </div>}
           </div>
-        ))}
+        );})}
       </div>
 
       <div className="timelineFooter">

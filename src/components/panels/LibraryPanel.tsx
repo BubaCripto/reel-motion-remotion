@@ -1,6 +1,7 @@
 import React from 'react';
 import type {ReelProject} from '../../lib/project';
 import {durationFrames,seconds,saveJson} from '../../lib/project';
+import {collectProjectMedia} from '../../lib/media';
 
 type Props = {
   library: ReelProject[];
@@ -15,6 +16,9 @@ type Props = {
   onBatchRender: () => void;
   onCleanStorage?: () => void;
   onNewProject?: () => void;
+  mediaStatus?: Record<string, 'checking' | 'available' | 'missing'>;
+  onCheckMedia?: () => void;
+  onRelinkMedia?: (src: string, file?: File) => void;
 };
 
 export const LibraryPanel: React.FC<Props> = ({
@@ -29,8 +33,12 @@ export const LibraryPanel: React.FC<Props> = ({
   onPickJson,
   onBatchRender,
   onCleanStorage,
-  onNewProject
+  onNewProject,
+  mediaStatus = {},
+  onCheckMedia,
+  onRelinkMedia
 }) => {
+  const media = collectProjectMedia(project);
   return (
     <div className="fields">
       <h3>PROJETOS SALVOS</h3>
@@ -51,10 +59,32 @@ export const LibraryPanel: React.FC<Props> = ({
         </button>
       )}
       <div className="buttonRow">
-        <button onClick={onSave}>Salvar atual</button>
+        <button onClick={onSave} title="Salva somente a configuração neste navegador">Salvar no navegador</button>
         <button onClick={() => saveJson(project)}>Exportar JSON</button>
       </div>
       <button onClick={onPickJson}>Abrir JSON salvo</button>
+
+      <div className="sectionLine">CENTRAL DE MÍDIA</div>
+      <p className="help">Confira os arquivos antes da exportação. Relinkar preserva cortes, posição e animações.</p>
+      <button onClick={onCheckMedia}>Verificar arquivos do projeto</button>
+      {!media.length && <p className="help">Este projeto ainda não usa arquivos importados.</p>}
+      {media.map(asset => {
+        const status = mediaStatus[asset.src] || 'checking';
+        const label = status === 'available' ? '✓ Disponível' : status === 'missing' ? '⚠ Ausente' : '○ Não verificado';
+        return <div className="savedItem" key={asset.src}>
+          <strong>{asset.label}</strong>
+          <small>{asset.kind} · usado em {asset.uses} {asset.uses === 1 ? 'item' : 'itens'}</small>
+          <small className={status === 'missing' ? 'mediaMissing' : status === 'available' ? 'mediaAvailable' : ''}>{label}</small>
+          <small title={asset.src}>{asset.src.split('/').pop()}</small>
+          <label className="relinkButton">
+            Relinkar arquivo
+            <input type="file" accept={asset.kind === 'video' ? 'video/*,.mov' : asset.kind === 'audio' ? 'audio/*' : asset.kind === 'image' ? 'image/*' : '.woff,.woff2,.ttf,.otf'} onChange={event => {
+              onRelinkMedia?.(asset.src, event.target.files?.[0]);
+              event.target.value = '';
+            }} />
+          </label>
+        </div>;
+      })}
       <div className="sectionLine">{library.length} projetos armazenados</div>
       {library.map(v => (
         <div className="savedItem" key={v.id}>

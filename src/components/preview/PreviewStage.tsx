@@ -17,8 +17,8 @@ type Props = {
   previewStageRef: React.RefObject<HTMLDivElement | null>;
   safeZone: boolean;
   onSetSafeZone: (v: boolean) => void;
-  safeTarget: 'reels' | 'post';
-  onSetSafeTarget: (v: 'reels' | 'post') => void;
+  safeTarget: 'reels' | 'post' | 'profile';
+  onSetSafeTarget: (v: 'reels' | 'post' | 'profile') => void;
   selected: Selection | null;
   cue: Cue | undefined;
   overlay: Overlay | undefined;
@@ -109,10 +109,11 @@ export const PreviewStage: React.FC<Props> = ({
           <select
             className="safeTarget"
             value={safeTarget}
-            onChange={e => onSetSafeTarget(e.target.value as 'reels' | 'post')}
+            onChange={e => onSetSafeTarget(e.target.value as 'reels' | 'post' | 'profile')}
           >
             <option value="reels">Reels · Meta</option>
             <option value="post">Post feed · 4:5</option>
+            <option value="profile">Grade perfil · 1:1</option>
           </select>
         )}
       </div>
@@ -135,7 +136,7 @@ export const PreviewStage: React.FC<Props> = ({
           {safeZone && (
             <div className={`safeZoneFrame ${safeTarget}`}>
               <span>
-                {safeTarget === 'reels' ? 'ÁREA SEGURA — REELS · META' : 'ÁREA VISÍVEL — POST FEED 4:5'}
+                {safeTarget === 'reels' ? 'ÁREA SEGURA — REELS · META' : safeTarget === 'post' ? 'ÁREA VISÍVEL — POST FEED 4:5' : 'RECORTE DA GRADE — PERFIL 1:1'}
               </span>
             </div>
           )}

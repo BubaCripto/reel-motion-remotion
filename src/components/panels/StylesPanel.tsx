@@ -17,6 +17,10 @@ type Props = {
   brandKits: BrandKit[];
   onSaveKit: () => void;
   onUseKit: (kit: BrandKit) => void;
+  onRenameKit: (id: string, name: string) => void;
+  onDuplicateKit: (kit: BrandKit) => void;
+  onDeleteKit: (id: string) => void;
+  onExportKit: (kit: BrandKit) => void;
 };
 
 export const StylesPanel: React.FC<Props> = ({
@@ -32,7 +36,11 @@ export const StylesPanel: React.FC<Props> = ({
   onSetKitName,
   brandKits,
   onSaveKit,
-  onUseKit
+  onUseKit,
+  onRenameKit,
+  onDuplicateKit,
+  onDeleteKit,
+  onExportKit
 }) => {
   return (
     <div className="fields">
@@ -103,13 +111,15 @@ export const StylesPanel: React.FC<Props> = ({
       <button onClick={onSaveKit}>+ Salvar identidade atual</button>
       {brandKits.map(b => (
         <div className="savedItem" key={b.id}>
-          <strong>{b.name}</strong>
+          <label>Nome da identidade<input value={b.name} onChange={e => onRenameKit(b.id, e.target.value)} /></label>
           <div className="kitSwatch">
             <i style={{background: b.background}} />
             <i style={{background: b.foreground}} />
             <i style={{background: b.accent}} />
           </div>
           <button onClick={() => onUseKit(b)}>Aplicar identidade como padrão</button>
+          <div className="buttonRow"><button onClick={() => onDuplicateKit(b)}>Duplicar</button><button onClick={() => onExportKit(b)}>Exportar JSON</button></div>
+          <button className="delete" onClick={() => onDeleteKit(b.id)}>Excluir identidade</button>
         </div>
       ))}
     </div>

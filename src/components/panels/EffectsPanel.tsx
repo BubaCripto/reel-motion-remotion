@@ -2,6 +2,7 @@ import React from 'react';
 import type {MotionOverlayType, Overlay} from '../../lib/project';
 import type {MotionSceneId} from '../../lib/motionCatalog';
 import {labelName} from '../../types/editor';
+import {SFX_OPTIONS} from '../../lib/sfx';
 
 type Props = {
   addText: string;
@@ -12,6 +13,7 @@ type Props = {
   onPickImage: () => void;
   onInsertCue: () => void;
   onAnalyzeAudio: (file?: File) => void;
+  onAddSfx: (file: string, label: string) => void;
 };
 
 export const EffectsPanel: React.FC<Props> = ({
@@ -22,7 +24,8 @@ export const EffectsPanel: React.FC<Props> = ({
   onAddMotionScene,
   onPickImage,
   onInsertCue,
-  onAnalyzeAudio
+  onAnalyzeAudio,
+  onAddSfx
 }) => {
   return (
     <div className="fields">
@@ -126,6 +129,10 @@ export const EffectsPanel: React.FC<Props> = ({
       <button onClick={onInsertCue}>+ Criar legenda no playhead</button>
 
       <div className="sectionLine">ANIMAÇÕES DE ÁUDIO</div>
+      <p className="help">Insira um efeito no playhead, depois ajuste duração, volume e ducking em Editar.</p>
+      <div className="presetGrid actions">
+        {SFX_OPTIONS.map(sfx => <button key={sfx.file} onClick={() => onAddSfx(sfx.file, sfx.label)}>+ {sfx.label}</button>)}
+      </div>
       <label>
         Importar arquivo para detectar picos
         <input type="file" accept="audio/*" onChange={e => onAnalyzeAudio(e.target.files?.[0])} />

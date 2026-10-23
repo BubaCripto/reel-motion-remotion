@@ -16,6 +16,7 @@ export type TimelineProps = {
   speed?: number;
   waveformColor?: string;
   subKind?: string;
+  locked?: boolean;
   onDown: (e: RPointerEvent<HTMLElement>, kind: Drag['kind'], id: string, mode: Drag['mode'], wordId?: string) => void;
   onMove: (e: RPointerEvent<HTMLElement>) => void;
   onEnd: () => void;
@@ -36,6 +37,7 @@ export function TimelineClip({
   speed,
   waveformColor,
   subKind,
+  locked = false,
   onDown,
   onMove,
   onEnd,
@@ -45,7 +47,7 @@ export function TimelineClip({
 
   return (
     <div
-      className={`timelineClip ${kind} ${subKind || ''} ${active ? 'active' : ''}`}
+      className={`timelineClip ${kind} ${subKind || ''} ${active ? 'active' : ''} ${locked ? 'locked' : ''}`}
       style={{
         left: start * zoom,
         width: Math.max(11, (end - start) * zoom),
@@ -63,12 +65,12 @@ export function TimelineClip({
           color: '#ffffff'
         } : {})
       }}
-      onPointerMove={onMove}
+      onPointerMove={locked ? undefined : onMove}
       onLostPointerCapture={onEnd}
       onPointerUp={onEnd}
       onClick={e => {
         e.stopPropagation();
-        onSelect(e.shiftKey || e.ctrlKey || e.metaKey);
+        if (!locked) onSelect(e.shiftKey || e.ctrlKey || e.metaKey);
       }}
     >
       {src && (
@@ -82,11 +84,11 @@ export function TimelineClip({
           color={waveformColor}
         />
       )}
-      <span className="edge" onPointerDown={e => onDown(e, kind, id, 'start', wordId)} />
-      <span className="clipLabel" title={text} onPointerDown={e => onDown(e, kind, id, 'move', wordId)}>
+      <span className="edge" onPointerDown={e => !locked && onDown(e, kind, id, 'start', wordId)} />
+      <span className="clipLabel" title={locked ? `${text} (trilha bloqueada)` : text} onPointerDown={e => !locked && onDown(e, kind, id, 'move', wordId)}>
         {text}
       </span>
-      <span className="edge" onPointerDown={e => onDown(e, kind, id, 'end', wordId)} />
+      <span className="edge" onPointerDown={e => !locked && onDown(e, kind, id, 'end', wordId)} />
     </div>
   );
 }

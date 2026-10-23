@@ -65,6 +65,7 @@ import {applyDirectorBlueprint, type DirectorBlueprint, type DirectorStyle, type
 import type {MotionSceneId} from './lib/motionCatalog';
 import {useShortcuts} from './hooks/useShortcuts';
 import {builtinFonts, storage, kitsStore, type Selection, type Drag, type BrandKit} from './types/editor';
+import {collectProjectMedia, relinkProjectMedia} from './lib/media';
 
 import './editor.css';
 import './style.css';
@@ -94,6 +95,7 @@ function ProjectStudio() {
   const [jobProgress, setJobProgress] = useState<number | null>(null);
   const activeRenderJobId = useRef<string | null>(null);
   const [storageInfo, setStorageInfo] = useState<{renderCount: number; renderMb: number} | null>(null);
+  const [mediaStatus, setMediaStatus] = useState<Record<string, 'checking' | 'available' | 'missing'>>({});
   const [out, setOut] = useState('');
   const [batchFiles, setBatchFiles] = useState<string[]>([]);
   const [aiReviewSession, setAiReviewSession] = useState<AiReviewSession | null>(null);
@@ -111,7 +113,7 @@ function ProjectStudio() {
   const [motionReviewSession, setMotionReviewSession] = useState<DirectorBlueprint | null>(null);
 
   const [safeZone, setSafeZone] = useState(true);
-  const [safeTarget, setSafeTarget] = useState<'reels' | 'post'>('reels');
+  const [safeTarget, setSafeTarget] = useState<'reels' | 'post' | 'profile'>('reels');
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [snapLine, setSnapLine] = useState<number | null>(null);
 
@@ -230,6 +232,27 @@ function ProjectStudio() {
     setP(x => ({...x, clips: x.clips.map(v => (v.id === id ? {...v, ...d} : v))}));
   };
 
+  // Track controls are part of the project (rather than temporary editor UI),
+  // so exported JSON and a reopened project keep the same working layout.
+  const updateTrackSettings = (id: import('./lib/project').TimelineTrackId, patch: import('./lib/project').TrackSettings[import('./lib/project').TimelineTrackId]) => {
+    rec();
+    setP(current => ({
+      ...current,
+      trackSettings: {...current.trackSettings, [id]: patch}
+    }));
+  };
+
+  const moveTrack = (id: import('./lib/project').TimelineTrackId, direction: -1 | 1) => {
+    const defaultOrder: import('./lib/project').TimelineTrackId[] = ['video','captions','texts','words','motion','broll','elements','effects','audio'];
+    const order = p.trackOrder?.length ? [...p.trackOrder] : defaultOrder;
+    const index = order.indexOf(id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= order.length) return;
+    rec();
+    [order[index], order[target]] = [order[target], order[index]];
+    setP(current => ({...current, trackOrder: order}));
+  };
+
   const editWord = (id: string, wid: string, d: Partial<Word>, undo = true) => {
     const c = p.cues.find(v => v.id === id);
     if (!c) return;
@@ -300,6 +323,35 @@ function ProjectStudio() {
     const v = await r.json();
     if (!r.ok) throw Error(v.error);
     return v.src;
+  };
+
+  const checkProjectMedia = async (project = p) => {
+    const assets = collectProjectMedia(project);
+    setMediaStatus(Object.fromEntries(assets.map(asset => [asset.src, 'checking'])));
+    const result = await Promise.all(assets.map(async asset => {
+      try {
+        const response = await fetch(asset.src, {method: 'HEAD', cache: 'no-store'});
+        return [asset.src, response.ok ? 'available' : 'missing'] as const;
+      } catch {
+        return [asset.src, 'missing'] as const;
+      }
+    }));
+    const status = Object.fromEntries(result) as Record<string, 'available' | 'missing'>;
+    setMediaStatus(status);
+    return status;
+  };
+
+  const relinkMedia = async (oldSrc: string, file?: File) => {
+    if (!file) return;
+    try {
+      const newSrc = await upload(file);
+      rec();
+      setP(current => relinkProjectMedia(current, oldSrc, newSrc));
+      setMediaStatus(current => ({...current, [oldSrc]: 'missing', [newSrc]: 'available'}));
+      notify(`Mídia reconectada: ${file.name}. Os cortes e elementos foram preservados.`);
+    } catch (error) {
+      setError(String(error));
+    }
   };
 
   const openVideo = async (file?: File) => {
@@ -428,6 +480,15 @@ function ProjectStudio() {
     } catch (e) {
       setError(String(e));
     }
+  };
+
+  const addBuiltInSfx = (file: string, label: string) => {
+    const id = uid();
+    const layer: Overlay = {id, kind: 'audio', name: `SFX — ${label}`, src: `/sfx/${file}`, start: cursor, end: Math.min(duration, cursor + 1), track: 0, x: 50, y: 50, scale: 1, rotation: 0, opacity: 1, volume: .65, ducking: false};
+    change({overlays: [...p.overlays, layer]});
+    select({kind: 'overlay', id});
+    setPanel('edit');
+    notify(`${label} inserido no playhead.`);
   };
 
   const openJson = async (f?: File) => {
@@ -820,6 +881,28 @@ function ProjectStudio() {
     notify('Identidade aplicada como padrão do projeto' + (cue && selectedCueIds.length > 1 && applyToAllSelected ? ' e às legendas selecionadas.' : '.'));
   };
 
+  const persistBrandKits = (next: BrandKit[]) => {
+    setBrandKits(next);
+    localStorage.setItem(kitsStore, JSON.stringify(next));
+  };
+
+  const renameKit = (id: string, name: string) => persistBrandKits(brandKits.map(kit => kit.id === id ? {...kit, name: name.slice(0, 80)} : kit));
+  const duplicateKit = (kit: BrandKit) => {
+    persistBrandKits([{...kit, id: uid(), name: `${kit.name} — cópia`}, ...brandKits].slice(0, 30));
+    notify('Identidade duplicada.');
+  };
+  const deleteKit = (id: string) => {
+    persistBrandKits(brandKits.filter(kit => kit.id !== id));
+    notify('Identidade removida. O projeto atual não foi alterado.');
+  };
+  const exportKit = (kit: BrandKit) => {
+    const anchor = document.createElement('a');
+    anchor.href = URL.createObjectURL(new Blob([JSON.stringify(kit, null, 2)], {type: 'application/json'}));
+    anchor.download = `${kit.name.replace(/[^\p{L}\p{N}_-]+/gu, '-') || 'identidade'}.brand-kit.json`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(anchor.href), 1000);
+  };
+
   const startJob = async (project: ReelProject, callback?: (url: string) => void) => {
     const r = await fetch('/api/render', {
       method: 'POST',
@@ -948,6 +1031,9 @@ function ProjectStudio() {
     setRenderJob('Preparando renderização MP4...');
     setOut('');
     try {
+      const media = await checkProjectMedia(p);
+      const missing = Object.entries(media).filter(([, status]) => status === 'missing').map(([src]) => src);
+      if (missing.length) throw Error(`Há ${missing.length} arquivo(s) de mídia ausente(s). Abra Biblioteca → Central de mídia para relinkar antes de exportar.`);
       const url = await startJob(p);
       setOut(url);
       notify('MP4 renderizado com legendas, camadas e cortes.');
@@ -1727,14 +1813,7 @@ function ProjectStudio() {
       <Topbar
         project={p}
         renderJob={renderJob}
-        onAnalyzeRhythm={() => setPanel('rhythm')}
         onNewProject={triggerNewProject}
-        onLoadDemo={loadDemo}
-        onPickVideo={() => pickerVideo.current?.click()}
-        onPickSrt={() => pickerSrt.current?.click()}
-        onPickAudio={() => pickerAudio.current?.click()}
-        onPickImage={() => pickerImage.current?.click()}
-        onPickFont={() => pickerFont.current?.click()}
         onSave={save}
         onExportMp4={exportMp4}
         onCancelRender={cancelRender}
@@ -1818,6 +1897,10 @@ function ProjectStudio() {
               brandKits={brandKits}
               onSaveKit={saveKit}
               onUseKit={useKit}
+              onRenameKit={renameKit}
+              onDuplicateKit={duplicateKit}
+              onDeleteKit={deleteKit}
+              onExportKit={exportKit}
             />
           )}
 
@@ -1831,6 +1914,7 @@ function ProjectStudio() {
               onPickImage={() => pickerImage.current?.click()}
               onInsertCue={insertCue}
               onAnalyzeAudio={analyzeAudio}
+              onAddSfx={addBuiltInSfx}
             />
           )}
 
@@ -1913,6 +1997,9 @@ function ProjectStudio() {
               onBatchRender={batchRender}
               storageInfo={storageInfo}
               onCleanStorage={cleanStorage}
+              mediaStatus={mediaStatus}
+              onCheckMedia={() => { void checkProjectMedia(); }}
+              onRelinkMedia={relinkMedia}
             />
           )}
         </aside>
@@ -2004,6 +2091,13 @@ function ProjectStudio() {
               notify('Palavras separadas e sincronizadas proporcionalmente.');
             }
           }}
+          onAnalyzeRhythm={() => setPanel('rhythm')}
+          onLoadDemo={loadDemo}
+          onPickVideo={() => pickerVideo.current?.click()}
+          onPickSrt={() => pickerSrt.current?.click()}
+          onPickAudio={() => pickerAudio.current?.click()}
+          onPickImage={() => pickerImage.current?.click()}
+          onPickFont={() => pickerFont.current?.click()}
         />
       </div>
 
@@ -2070,6 +2164,8 @@ function ProjectStudio() {
         endScrub={endScrub}
         snapLine={snapLine}
         onSelectMultipleCues={ids => setSelectedCueIds(ids)}
+        onUpdateTrack={updateTrackSettings}
+        onMoveTrack={moveTrack}
       />
 
       <AiReviewModal

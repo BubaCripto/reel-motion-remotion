@@ -21,7 +21,7 @@ export function useShortcuts(actions: ShortcutActions) {
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         actions.onUndo();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+      } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
         e.preventDefault();
         actions.onRedo();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {

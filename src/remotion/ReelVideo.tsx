@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill,Audio,OffthreadVideo,Img,Sequence,interpolate,spring,staticFile,useCurrentFrame,useVideoConfig} from 'remotion';
-import {animatedValue,clamp,normalizeWords,textTokens,type Cue,type ReelProject,type Overlay,type Preset,type VideoClip} from '../lib/project';
+import {animatedValue,clamp,isTranscript,normalizeWords,textTokens,type Cue,type ReelProject,type Overlay,type Preset,type TimelineTrackId,type VideoClip} from '../lib/project';
 import {
   KineticTypography,
   SvgStrokePath,
@@ -126,13 +126,13 @@ const Caption:React.FC<{cue:Cue;p:ReelProject;index:number;frames:number}>=({cue
  })}</div></div></AbsoluteFill>;
 };
 
-const OverlayView:React.FC<{layer:Overlay;cues?:Cue[]}>=({layer:l,cues})=>{
+const OverlayView:React.FC<{layer:Overlay;cues?:Cue[];forceMuted?:boolean}>=({layer:l,cues,forceMuted=false})=>{
  const frame=useCurrentFrame(),{fps}=useVideoConfig(),now=l.start+frame/fps;
  const x=animatedValue(l.keyframes,now,'x',l.x),y=animatedValue(l.keyframes,now,'y',l.y),scale=animatedValue(l.keyframes,now,'scale',l.scale),rotate=animatedValue(l.keyframes,now,'rotate',l.rotation),opacity=animatedValue(l.keyframes,now,'opacity',l.opacity);
  const intro=spring({frame,fps,config:{damping:14,stiffness:115}}),outro=interpolate(frame,[Math.max(0,(l.end-l.start)*fps-7),Math.max(1,(l.end-l.start)*fps)],[1,0],{extrapolateLeft:'clamp',extrapolateRight:'clamp'});
  if(l.kind==='audio'){
   if(!l.src)return null;
-  if(l.muted)return <Audio src={media(l.src)} volume={0}/>;
+  if(l.muted||forceMuted)return <Audio src={media(l.src)} volume={0}/>;
   const baseVol=clamp(l.volume??1,0,1);
   let finalVol=baseVol;
   if(l.ducking!==false&&cues?.length){
@@ -148,7 +148,7 @@ const OverlayView:React.FC<{layer:Overlay;cues?:Cue[]}>=({layer:l,cues})=>{
  if((l.kind==='image'||l.kind==='video')&&!l.src)return null;
  const style:React.CSSProperties={position:'absolute',left:`${x}%`,top:`${y}%`,transform:`translate(-50%,-50%) rotate(${rotate}deg) scale(${scale*(l.mediaRole==='broll'?1:.7+.3*intro)})`,opacity:opacity*outro,width:l.kind==='image'||l.kind==='video'?`${l.frameWidth??(l.kind==='video'?100:50)}%`:undefined,height:l.frameHeight?`${l.frameHeight}%`:undefined,textAlign:'center',pointerEvents:'none'};
  if(l.kind==='image'&&l.src)return <AbsoluteFill><Img src={media(l.src)} style={{...style,objectFit:l.mediaRole==='broll'?'cover':'contain'}}/></AbsoluteFill>;
- if(l.kind==='video'&&l.src)return <AbsoluteFill><OffthreadVideo src={media(l.src)} startFrom={Math.round((l.sourceStart??0)*fps)} playbackRate={l.speed??1} muted={l.muted??true} volume={l.muted?0:clamp(l.volume??1,0,1)} pauseWhenBuffering={false} style={{...style,objectFit:'cover'}}/></AbsoluteFill>;
+ if(l.kind==='video'&&l.src)return <AbsoluteFill><OffthreadVideo src={media(l.src)} startFrom={Math.round((l.sourceStart??0)*fps)} playbackRate={l.speed??1} muted={forceMuted||(l.muted??true)} volume={forceMuted||l.muted?0:clamp(l.volume??1,0,1)} pauseWhenBuffering={false} style={{...style,objectFit:'cover'}}/></AbsoluteFill>;
  if(l.kind==='text')return <AbsoluteFill><div style={{...style,whiteSpace:'pre-wrap',maxWidth:'92%',fontFamily:font(l.fontA),fontSize:100,fontWeight:l.fontWeight??800,color:l.color??'#fff',WebkitTextStroke:l.strokeWidth?`${l.strokeWidth}px ${l.strokeColor??'#000'}`:undefined,paintOrder:'stroke fill',textShadow:'0 4px 8px #000a'}}>{l.text}</div></AbsoluteFill>;
  if(l.kind==='effect'&&l.type==='zoom-pulse')return null;
  if(l.type==='scribble')return <AbsoluteFill><svg style={{position:'absolute',left:`${x}%`,top:`${y}%`,width:`${scale*500}px`,height:`${scale*200}px`,transform:`translate(-50%,-50%) rotate(${rotate}deg)`,opacity:opacity}} viewBox="0 0 500 200"><path d="M42 105 C88 8 433 8 457 103 C489 190 55 207 42 105" fill="none" stroke={l.color??'#eac34b'} strokeWidth={l.strokeWidth??12} strokeLinecap="round" strokeDasharray="1150" strokeDashoffset={1150*(1-intro)}/></svg></AbsoluteFill>;
@@ -216,7 +216,7 @@ const OverlayView:React.FC<{layer:Overlay;cues?:Cue[]}>=({layer:l,cues})=>{
  return <AbsoluteFill><div style={{...style,width:l.type==='circle'?280:450,height:l.type==='circle'?280:125,background:l.color??'#e7bf57',borderRadius:l.type==='circle'?'50%':12,boxShadow:'0 12px 30px #0004'}}/></AbsoluteFill>;
 };
 
-const VideoLayer:React.FC<{clip:VideoClip;p:ReelProject}>=({clip,p})=>{
+const VideoLayer:React.FC<{clip:VideoClip;p:ReelProject;forceMuted?:boolean}>=({clip,p,forceMuted=false})=>{
  const frame=useCurrentFrame(),{fps}=useVideoConfig(),at=clip.start+frame/fps;
  const zoom=animatedValue(clip.keyframes,at,'scale',clip.zoom??1),x=animatedValue(clip.keyframes,at,'x',clip.x??50),y=animatedValue(clip.keyframes,at,'y',clip.y??50);
 
@@ -258,8 +258,8 @@ const VideoLayer:React.FC<{clip:VideoClip;p:ReelProject}>=({clip,p})=>{
        src={media(clip.src)}
        startFrom={Math.round(clip.sourceStart*fps)}
        playbackRate={clip.speed}
-       muted={clip.muted}
-       volume={clip.muted?0:clamp(clip.volume??1,0,1)}
+       muted={forceMuted||clip.muted}
+       volume={forceMuted||clip.muted?0:clamp(clip.volume??1,0,1)}
        pauseWhenBuffering={false}
        style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:`${x}% ${y}%`,transform:`scale(${zoom})`}}
      />
@@ -274,13 +274,25 @@ export const ReelVideo:React.FC<{project:ReelProject}>=({project:p})=>{
  const frame=useCurrentFrame();
  const legacy=!p.clips?.length&&p.videoSrc;
  const layers=[...(p.overlays??[])].sort((a,b)=>a.track-b.track),isBroll=(l:Overlay)=>l.kind==='video'||l.mediaRole==='broll';
+ const soloTracks=(Object.entries(p.trackSettings??{}) as [TimelineTrackId, {solo?:boolean}][]).filter(([, settings])=>settings.solo).map(([id])=>id);
+ const enabled=(track:TimelineTrackId)=>!p.trackSettings?.[track]?.hidden&&(!soloTracks.length||soloTracks.includes(track));
+ const muted=(track:TimelineTrackId)=>!!p.trackSettings?.[track]?.muted;
+ const layerTrack=(layer:Overlay):TimelineTrackId=>{
+   if(isBroll(layer))return 'broll';
+   if(layer.kind==='motion')return 'motion';
+   if(layer.kind==='effect')return 'effects';
+   if(layer.kind==='audio')return 'audio';
+   return 'elements';
+ };
  const renderLayer=(layer:Overlay)=>{
+  const track=layerTrack(layer);
+  if(!enabled(track))return null;
   const layerKey=[layer.id,layer.kind,layer.motionType,layer.start,layer.end,layer.text,layer.color,layer.x,layer.y,layer.scale,layer.rotation,layer.opacity,JSON.stringify(layer.motionProps??{})].join('|');
-  return <LayerErrorBoundary key={layer.id} layerKey={layerKey}><Sequence premountFor={p.fps} from={Math.max(0,Math.round(layer.start*p.fps))} durationInFrames={Math.max(1,Math.round((layer.end-layer.start)*p.fps))}><OverlayView layer={layer} cues={p.cues}/></Sequence></LayerErrorBoundary>;
+  return <LayerErrorBoundary key={layer.id} layerKey={layerKey}><Sequence premountFor={p.fps} from={Math.max(0,Math.round(layer.start*p.fps))} durationInFrames={Math.max(1,Math.round((layer.end-layer.start)*p.fps))}><OverlayView layer={layer} cues={p.cues} forceMuted={muted(track)}/></Sequence></LayerErrorBoundary>;
  };
 
  const now=frame/p.fps;
- const activeShake=layers.find(l=>l.kind==='motion'&&(l.motionType==='camera-shake'||l.motionProps?.cameraShake)&&now>=l.start&&now<l.end);
+ const activeShake=enabled('motion')?layers.find(l=>l.kind==='motion'&&(l.motionType==='camera-shake'||l.motionProps?.cameraShake)&&now>=l.start&&now<l.end):undefined;
  const shakeFrame=activeShake?Math.round((now-activeShake.start)*p.fps):0;
  const shakeDecay=activeShake?Math.max(1,Math.round((activeShake.end-activeShake.start)*p.fps)):10;
  const shakeIntensity=activeShake?.motionProps?.intensity??16;
@@ -288,10 +300,10 @@ export const ReelVideo:React.FC<{project:ReelProject}>=({project:p})=>{
  const content=(
   <AbsoluteFill style={{background:p.transparent?'transparent':p.background}}>
   {p.fonts?.map(f=><style key={f.name}>{`@font-face{font-family:'${f.name.replace(/['"<>]/g,'')}';src:url('${media(f.src)}');font-display:block;}`}</style>)}
-  {legacy&&<OffthreadVideo src={media(p.videoSrc)} pauseWhenBuffering={false} style={{width:'100%',height:'100%',objectFit:'cover'}}/>}
-  {p.clips?.map(clip=><Sequence key={clip.id} from={Math.round(clip.start*p.fps)} durationInFrames={Math.max(1,Math.round((clip.end-clip.start)*p.fps))}><VideoLayer clip={clip} p={p}/></Sequence>)}
+  {legacy&&enabled('video')&&<OffthreadVideo src={media(p.videoSrc)} muted={muted('video')} volume={muted('video')?0:1} pauseWhenBuffering={false} style={{width:'100%',height:'100%',objectFit:'cover'}}/>}
+  {enabled('video')&&p.clips?.map(clip=><Sequence key={clip.id} from={Math.round(clip.start*p.fps)} durationInFrames={Math.max(1,Math.round((clip.end-clip.start)*p.fps))}><VideoLayer clip={clip} p={p} forceMuted={muted('video')}/></Sequence>)}
   {layers.filter(isBroll).map(renderLayer)}
-  {p.cues.map((c,i)=><Sequence key={c.id} from={Math.max(0,Math.round(c.start*p.fps))} durationInFrames={Math.max(1,Math.round((c.end-c.start)*p.fps))}><Caption cue={c} p={p} index={i} frames={Math.max(1,Math.round((c.end-c.start)*p.fps))}/></Sequence>)}
+  {p.cues.filter(c=>isTranscript(c)?(enabled('captions')||enabled('words')):enabled('texts')).map((c,i)=><Sequence key={c.id} from={Math.max(0,Math.round(c.start*p.fps))} durationInFrames={Math.max(1,Math.round((c.end-c.start)*p.fps))}><Caption cue={c} p={p} index={i} frames={Math.max(1,Math.round((c.end-c.start)*p.fps))}/></Sequence>)}
   {layers.filter(l=>!isBroll(l)).map(renderLayer)}
   {p.colorGrade && p.colorGrade !== 'none' && (
    <AnalogTextureOverlay colorGrade={p.colorGrade} grain={false} vignette={false}/>

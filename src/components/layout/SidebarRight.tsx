@@ -16,6 +16,13 @@ type Props = {
   wordExpanded: boolean;
   onToggleWordExpanded: () => void;
   onSplitCueWords: () => void;
+  onAnalyzeRhythm: () => void;
+  onLoadDemo: () => void;
+  onPickVideo: () => void;
+  onPickSrt: () => void;
+  onPickAudio: () => void;
+  onPickImage: () => void;
+  onPickFont: () => void;
 };
 
 export const SidebarRight: React.FC<Props> = ({
@@ -30,12 +37,25 @@ export const SidebarRight: React.FC<Props> = ({
   onSetSnapEnabled,
   wordExpanded,
   onToggleWordExpanded,
-  onSplitCueWords
+  onSplitCueWords,
+  onAnalyzeRhythm,
+  onLoadDemo,
+  onPickVideo,
+  onPickSrt,
+  onPickAudio,
+  onPickImage,
+  onPickFont
 }) => {
   return (
     <aside className="rightPanel">
       <h3>PRODUÇÃO</h3>
       <p>Ferramentas para editar legendas, palavras, cortes, efeitos e elementos gráficos na mesma timeline.</p>
+      <div className="sectionLine">AÇÕES RÁPIDAS</div>
+      <button onClick={onAnalyzeRhythm}>✦ Analisar ritmo</button>
+      <button onClick={onLoadDemo}>▣ Carregar demo completo</button>
+      <div className="buttonRow"><button onClick={onPickVideo}>+ Vídeo</button><button onClick={onPickSrt}>+ SRT</button></div>
+      <div className="buttonRow"><button onClick={onPickAudio}>+ Áudio</button><button onClick={onPickImage}>+ Imagem</button></div>
+      <button onClick={onPickFont}>+ Fonte</button>
       <SourceFrameRates project={p} state={sourceRates} onUseSource={onUseSourceFps} />
       <div className="shortcut">
         <b>Espaço</b>
@@ -46,8 +66,12 @@ export const SidebarRight: React.FC<Props> = ({
         <span>Desfazer</span>
       </div>
       <div className="shortcut">
-        <b>Ctrl + Y</b>
+        <b>Ctrl + Y / Ctrl + Shift + Z</b>
         <span>Refazer</span>
+      </div>
+      <div className="shortcut">
+        <b>Ctrl + Shift + A</b>
+        <span>Selecionar legendas geradas</span>
       </div>
       <div className="shortcut">
         <b>Ctrl + D</b>
@@ -80,7 +104,7 @@ export const SidebarRight: React.FC<Props> = ({
 
       <div className="sectionLine">EDIÇÃO PRECISA</div>
       <p>
-        Arraste o bloco na timeline para mover. Arraste suas bordas para cortar. Abra a faixa de palavras para ajustar cada uma.
+        Arraste o bloco na timeline para mover. Arraste suas bordas para cortar. Arraste em área vazia de uma faixa de texto para selecionar vários itens dela.
       </p>
       <button onClick={onToggleWordExpanded}>
         {wordExpanded ? 'Ocultar' : 'Mostrar'} faixa de palavras

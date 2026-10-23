@@ -5,14 +5,7 @@ import {ASPECT_RATIOS} from '../../lib/project';
 type Props = {
   project: ReelProject;
   renderJob: string;
-  onAnalyzeRhythm: () => void;
   onNewProject?: () => void;
-  onLoadDemo: () => void;
-  onPickVideo: () => void;
-  onPickSrt: () => void;
-  onPickAudio: () => void;
-  onPickImage: () => void;
-  onPickFont: () => void;
   onSave: () => void;
   onExportMp4: () => void;
   onCancelRender?: () => void;
@@ -23,14 +16,7 @@ type Props = {
 export const Topbar: React.FC<Props> = ({
   project,
   renderJob,
-  onAnalyzeRhythm,
   onNewProject,
-  onLoadDemo,
-  onPickVideo,
-  onPickSrt,
-  onPickAudio,
-  onPickImage,
-  onPickFont,
   onSave,
   onExportMp4,
   onCancelRender,
@@ -100,14 +86,7 @@ export const Topbar: React.FC<Props> = ({
           </button>
         )}
 
-        <button onClick={onAnalyzeRhythm}>✦ Analisar ritmo</button>
-        <button onClick={onLoadDemo}>▣ Demo completo</button>
-        <button onClick={onPickVideo}>+ Vídeo</button>
-        <button onClick={onPickSrt}>+ SRT</button>
-        <button onClick={onPickAudio}>+ Áudio</button>
-        <button onClick={onPickImage}>+ Imagem</button>
-        <button onClick={onPickFont}>+ Fonte</button>
-        <button onClick={onSave}>Salvar</button>
+        <button onClick={onSave} title="Salva a configuração no navegador; exporte JSON para levar o projeto a outro computador">Salvar no navegador</button>
 
         {renderJob && onCancelRender ? (
           <div style={{display: 'flex', gap: 6, alignItems: 'center'}}>
