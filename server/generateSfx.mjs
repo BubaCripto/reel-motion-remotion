@@ -183,4 +183,69 @@ const sampleRate = 44100;
   fs.writeFileSync(path.join(outDir, 'riser-speed.wav'), createWavBuffer(samples));
 })();
 
+// 9–18. Original procedural UI effects. Keeping these generated in-repo makes
+// the editor and render worker self-contained, with no third-party download or
+// licensing dependency.
+const write = (name, duration, sample) => {
+  const count = Math.floor(sampleRate * duration);
+  const samples = new Float32Array(count);
+  for (let i = 0; i < count; i++) samples[i] = sample(i / sampleRate, i / count, i);
+  fs.writeFileSync(path.join(outDir, name), createWavBuffer(samples));
+};
+const tone = (frequency, time) => Math.sin(2 * Math.PI * frequency * time);
+
+write('cash-register.wav', .52, (t) => {
+  const click = t < .025 ? (Math.random() * 2 - 1) * Math.exp(-t * 125) : 0;
+  const bellTime = t - .08;
+  const bell = bellTime > 0 ? (tone(2350, bellTime) * .58 + tone(3520, bellTime) * .24) * Math.exp(-bellTime * 6) : 0;
+  const drawerTime = t - .20;
+  const drawer = drawerTime > 0 ? (Math.random() * 2 - 1) * .17 * Math.exp(-drawerTime * 12) : 0;
+  return click + bell + drawer;
+});
+write('sale-cha-ching.wav', .7, (t) => {
+  const hit = t < .028 ? (Math.random() * 2 - 1) * Math.exp(-t * 95) * .55 : 0;
+  const a = tone(1318.5, t) * Math.exp(-t * 6.5);
+  const late = t - .09;
+  const b = late > 0 ? tone(1975.5, late) * Math.exp(-late * 5) : 0;
+  return hit + (a + b) * .52;
+});
+write('profit-up.wav', .76, (t, n) => {
+  const frequency = 290 * Math.exp(n * 1.85);
+  return (tone(frequency, t) * .58 + tone(frequency * 2, t) * .16) * Math.sin(n * Math.PI) ** .72;
+});
+write('cash-counting.wav', .64, (t) => {
+  const pulse = (t * 12) % 1;
+  return pulse < .17 ? ((Math.random() * 2 - 1) * .28 + tone(1300, t) * .35) * Math.exp(-pulse * 24) : 0;
+});
+write('coin-rain.wav', .92, (t) => {
+  let sound = 0;
+  for (const start of [.03, .15, .26, .39, .53, .66]) {
+    const local = t - start;
+    if (local >= 0) sound += (tone(2190, local) * .28 + tone(3290, local) * .12) * Math.exp(-local * 14);
+  }
+  return sound;
+});
+write('bell-notification.wav', 1.1, (t) => (tone(1318.5, t) * .6 + tone(1975.5, t) * .35) * Math.exp(-t * 4.5));
+write('glitch-digital.wav', .32, (t, n) => {
+  const gate = Math.floor(n * 19) % 2 ? 1 : .13;
+  return ((Math.random() * 2 - 1) * .48 + tone(220 + n * 980, t) * .38) * Math.exp(-n * 2.8) * gate;
+});
+write('popup-bubble.wav', .18, (t) => tone(920 * Math.exp(-t * 16) + 190, t) * Math.exp(-t * 22) * .9);
+write('error-buzzer.wav', .42, (t) => tone(170 + (Math.floor(t * 9) % 2) * 35, t) * Math.exp(-t * 3.3) * .8);
+write('counter-tick.wav', .075, (t) => (tone(1750, t) * .8 + tone(2600, t) * .18) * Math.exp(-t * 42));
+write('counter-finish.wav', .72, (t) => {
+  const first = tone(1046.5, t) * Math.exp(-t * 8);
+  const secondTime = t - .12;
+  const second = secondTime > 0 ? tone(1568, secondTime) * Math.exp(-secondTime * 6) : 0;
+  return (first + second) * .65;
+});
+write('success-chime.wav', .95, (t) => {
+  const a = tone(783.99, t) * Math.exp(-t * 5);
+  const later = t - .14;
+  const b = later > 0 ? tone(1174.66, later) * Math.exp(-later * 4.4) : 0;
+  return (a + b) * .58;
+});
+write('ui-click.wav', .09, (t) => ((Math.random() * 2 - 1) * .22 + tone(1900, t) * .7) * Math.exp(-t * 39));
+write('transition-swipe.wav', .38, (t, n) => ((Math.random() * 2 - 1) * .48 + tone(220 + n * 1180, t) * .2) * Math.sin(n * Math.PI) ** 1.3 * .75);
+
 console.log('SFX generation complete in ' + outDir);

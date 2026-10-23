@@ -266,7 +266,7 @@ Retorne SOMENTE JSON rigoroso no formato:
         "metric"?: string,
         "accent"?: string
       },
-      "sfx": "whoosh-fast"|"impact-boom"|"pop-clean"|"camera-click"|"vinyl-scratch"|"coin-ding"|"riser-speed"
+      "sfx": "whoosh-fast"|"impact-boom"|"pop-clean"|"camera-click"|"vinyl-scratch"|"coin-ding"|"riser-speed"|"cash-register"|"sale-cha-ching"|"profit-up"|"cash-counting"|"coin-rain"|"bell-notification"|"glitch-digital"|"popup-bubble"|"error-buzzer"|"counter-tick"|"counter-finish"|"success-chime"|"ui-click"|"transition-swipe"
     }
   ],
   "soundDesign": [{"time": number, "sfx": string, "volume": number}]

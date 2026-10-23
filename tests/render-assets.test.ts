@@ -6,6 +6,9 @@ import {createBlankProject, type Cue} from '../src/lib/project.ts';
 
 test('renderer accepts bundled SFX alongside editor-imported media', () => {
   assert.equal(isRenderableAsset('/sfx/camera-click.wav'), true);
+  for (const file of ['cash-register.wav', 'sale-cha-ching.wav', 'profit-up.wav', 'cash-counting.wav', 'coin-rain.wav', 'bell-notification.wav', 'glitch-digital.wav', 'popup-bubble.wav', 'error-buzzer.wav', 'counter-tick.wav', 'counter-finish.wav', 'success-chime.wav', 'ui-click.wav', 'transition-swipe.wav']) {
+    assert.equal(isRenderableAsset(`/sfx/${file}`), true, `${file} must be available to the render worker`);
+  }
   assert.equal(isRenderableAsset('/media/dfeaa652-99ee-48b4-9755-de06c038c9a5-preview.mp4'), true);
 });
 
