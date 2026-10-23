@@ -568,7 +568,7 @@ function ProjectStudio() {
       end: Math.min(duration + 2, cursor + 2.5),
       x: 50,
       y: 70,
-      track: 1,
+      track: 2,
       preset: p.preset
     };
     change({cues: [...p.cues, c]});
@@ -579,7 +579,7 @@ function ProjectStudio() {
   const insertStyledCue = (preset: Preset) => {
     const c: Cue = {
       id: uid(), text: 'SEU TEXTO', source: 'manual', start: cursor,
-      end: Math.min(duration + 2, cursor + 2.5), x: 50, y: 70, track: 1, preset
+      end: Math.min(duration + 2, cursor + 2.5), x: 50, y: 70, track: 2, preset
     };
     change({cues: [...p.cues, c]});
     select({kind: 'cue', id: c.id});

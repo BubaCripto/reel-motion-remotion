@@ -9,6 +9,8 @@ const generated=()=>parseSrt('1\n00:00:00,000 --> 00:00:01,800\n30 dias, 30 estr
 
 test('generating captions preserves all four authored texts from 30 dias',()=>{
  const before=validateProject(legacy),snapshot=structuredClone(before);
+ assert.ok(before.cues.every(c=>c.source==='manual'&&c.track===2),'legacy authored text is migrated to its own lane');
+ assert.ok(before.cues.every(c=>c.preset==='sticker'),'legacy text inherits its project preset when it had no per-item preset');
  const after=replaceTranscript(before,generated());
  const tracks=cueTracks(after.cues);
  assert.equal(tracks.texts.length,4);

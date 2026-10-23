@@ -164,7 +164,44 @@ export function parsePlain(raw:string,seconds=2.5){return raw.split(/\n+/).map(s
 export function textTokens(text:string):{text:string;highlight:boolean}[]{return [...text.matchAll(/\[([^\]]+)\]|([^\s]+)/g)].map(x=>({text:x[1]??x[2],highlight:!!x[1]}));}
 export function splitWords(c:Cue):Word[]{const t=textTokens(c.text);const weights=t.map(w=>Math.max(1,w.text.replace(/[^\p{L}\p{N}]/gu,'').length)**.7);const sum=weights.reduce((a,b)=>a+b,0)||1;let pos=c.start;return t.map((t,i)=>{const start=pos,end=i===weights.length-1?c.end:Math.min(c.end,pos+(c.end-c.start)*weights[i]/sum);pos=end;return {id:`${c.id}:w${i}`,text:t.text,highlight:t.highlight,start,end};});}
 export function normalizeWords(c:Cue):Word[]{const t=textTokens(c.text);if(c.words?.length===t.length&&c.words.every((w,i)=>w.text===t[i].text))return c.words;return splitWords(c);}
-export function validateProject(input:unknown):ReelProject{if(!input||typeof input!=='object')throw Error('Projeto JSON inválido');const p=input as Partial<ReelProject>;if(!Array.isArray(p.cues)||!p.cues.every(c=>typeof c.text==='string'&&Number.isFinite(c.start)&&Number.isFinite(c.end)&&c.end>c.start))throw Error('Legendas inválidas');const r={...clone(initialProject),...p,exportFpsMode:p.exportFpsMode==='source'?'source':'manual',cues:p.cues,clips:Array.isArray(p.clips)?p.clips:[],overlays:Array.isArray(p.overlays)?p.overlays:[],fonts:Array.isArray(p.fonts)?p.fonts:[]} as ReelProject;if(r.width<100||r.height<100||r.fps<=0)throw Error('Resolução ou FPS inválidos');return r;}
+/** Makes older saved manual texts explicit, without changing their authored text, timing or placement. */
+function migrateLegacyCues(cues: Cue[], project: Pick<ReelProject, 'preset'|'fontA'|'fontB'|'twoFonts'|'foreground'|'accent'>): Cue[] {
+ return cues.map(cue => {
+  const source = cue.source === 'transcript' ? 'transcript' : 'manual';
+  const preset = PRESETS.includes(cue.preset as Preset) ? cue.preset : project.preset;
+  return {
+   ...cue,
+   source,
+   // Tracks are semantic, rather than a legacy visual value: authored text must
+   // never be restored into the generated-caption lane.
+   track: source === 'transcript' ? 1 : 2,
+   preset,
+   fontA: cue.fontA ?? project.fontA,
+   // `fontB` is a manual-text style. Do not mutate a serialized generated
+   // caption merely because the project happens to use a second display font.
+   ...(source === 'manual'
+    ? {fontB: cue.fontB ?? project.fontB}
+    : (cue.fontB ? {fontB: cue.fontB} : {})),
+   twoFonts: cue.twoFonts ?? project.twoFonts,
+   foreground: cue.foreground ?? project.foreground,
+   accent: cue.accent ?? project.accent,
+   highlightMode: cue.highlightMode ?? 'color',
+   x: cue.x ?? 50,
+   y: cue.y ?? (source === 'transcript' ? 70 : 50),
+   scale: cue.scale ?? 1
+  };
+ });
+}
+
+export function validateProject(input:unknown):ReelProject{
+ if(!input||typeof input!=='object')throw Error('Projeto JSON inválido');
+ const p=input as Partial<ReelProject>;
+ if(!Array.isArray(p.cues)||!p.cues.every(c=>typeof c.text==='string'&&Number.isFinite(c.start)&&Number.isFinite(c.end)&&c.end>c.start))throw Error('Legendas inválidas');
+ const baseProject={...clone(initialProject),...p,exportFpsMode:p.exportFpsMode==='source'?'source':'manual'} as ReelProject;
+ const r={...baseProject,cues:migrateLegacyCues(p.cues,baseProject),clips:Array.isArray(p.clips)?p.clips:[],overlays:Array.isArray(p.overlays)?p.overlays:[],fonts:Array.isArray(p.fonts)?p.fonts:[]} as ReelProject;
+ if(r.width<100||r.height<100||r.fps<=0)throw Error('Resolução ou FPS inválidos');
+ return r;
+}
 export function saveJson(p:ReelProject){const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=p.name.replace(/[^a-z0-9_-]+/gi,'-')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}
 export const downloadJson=saveJson;
 /** Legacy cues are authored project text. Only an explicit source belongs to the transcript track. */

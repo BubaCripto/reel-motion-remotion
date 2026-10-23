@@ -24,6 +24,18 @@ const sceneTextFields = (scene: string): MotionTextField[] => {
   }
 };
 
+const SFX_OPTIONS = [
+  {file: 'whoosh-fast.wav', label: 'Whoosh rápido'},
+  {file: 'whoosh-cinematic.wav', label: 'Whoosh cinematográfico'},
+  {file: 'impact-boom.wav', label: 'Impacto / boom'},
+  {file: 'pop-clean.wav', label: 'Pop limpo'},
+  {file: 'camera-click.wav', label: 'Clique de câmera'},
+  {file: 'vinyl-scratch.wav', label: 'Vinil / scratch'},
+  {file: 'coin-ding.wav', label: 'Moeda / ding'},
+  {file: 'riser-speed.wav', label: 'Riser de velocidade'}
+] as const;
+const builtInSfxFile = (src?: string) => src?.match(/^\/sfx\/([a-z0-9-]+\.wav)$/i)?.[1] ?? null;
+
 type Props = {
   project: ReelProject;
   selected: Selection | null;
@@ -393,13 +405,29 @@ export const EditPanel: React.FC<Props> = ({
           >
             {overlay.kind === 'motion' ? `⚡ Motion Graphics · ${overlay.motionType || 'Cena'}` : `Camada independente · ${overlay.kind}`}
           </div>
-          <label>
-            Nome
-            <input
-              value={overlay.name}
-              onChange={e => onEditLayer(overlay.id, {name: e.target.value})}
-            />
-          </label>
+          {overlay.kind === 'audio' && builtInSfxFile(overlay.src) ? (
+            <label>
+              Efeito sonoro
+              <select
+                value={builtInSfxFile(overlay.src) || ''}
+                onChange={e => {
+                  const option = SFX_OPTIONS.find(item => item.file === e.target.value);
+                  if (!option) return;
+                  onEditLayer(overlay.id, {src: `/sfx/${option.file}`, name: `SFX — ${option.label}`});
+                }}
+              >
+                {SFX_OPTIONS.map(option => <option key={option.file} value={option.file}>{option.label}</option>)}
+              </select>
+            </label>
+          ) : (
+            <label>
+              Nome
+              <input
+                value={overlay.name}
+                onChange={e => onEditLayer(overlay.id, {name: e.target.value})}
+              />
+            </label>
+          )}
 
           {overlay.kind === 'motion' && (
             <div
