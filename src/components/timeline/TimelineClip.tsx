@@ -15,6 +15,7 @@ export type TimelineProps = {
   sourceStart?: number;
   speed?: number;
   waveformColor?: string;
+  subKind?: string;
   onDown: (e: RPointerEvent<HTMLElement>, kind: Drag['kind'], id: string, mode: Drag['mode'], wordId?: string) => void;
   onMove: (e: RPointerEvent<HTMLElement>) => void;
   onEnd: () => void;
@@ -34,15 +35,34 @@ export function TimelineClip({
   sourceStart,
   speed,
   waveformColor,
+  subKind,
   onDown,
   onMove,
   onEnd,
   onSelect
 }: TimelineProps) {
+  const isMotion = subKind === 'motion';
+
   return (
     <div
-      className={`timelineClip ${kind} ${active ? 'active' : ''}`}
-      style={{left: start * zoom, width: Math.max(11, (end - start) * zoom), position: 'absolute', overflow: 'hidden'}}
+      className={`timelineClip ${kind} ${subKind || ''} ${active ? 'active' : ''}`}
+      style={{
+        left: start * zoom,
+        width: Math.max(11, (end - start) * zoom),
+        position: 'absolute',
+        overflow: 'hidden',
+        ...(isMotion ? {
+          background: active
+            ? 'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)'
+            : 'linear-gradient(135deg, #5b21b6 0%, #be185d 100%)',
+          borderColor: active ? '#ffffff' : '#f472b6',
+          boxShadow: active
+            ? '0 0 0 2px #fff, 0 4px 14px rgba(236,72,153,0.6)'
+            : '0 2px 8px rgba(190,24,93,0.35)',
+          fontWeight: 700,
+          color: '#ffffff'
+        } : {})
+      }}
       onPointerMove={onMove}
       onLostPointerCapture={onEnd}
       onPointerUp={onEnd}

@@ -20,7 +20,7 @@ type Props = {
   onDown: (e: RPointerEvent<HTMLElement>, kind: Drag['kind'], id: string, mode: Drag['mode'], wordId?: string) => void;
   onMove: (e: RPointerEvent<HTMLElement>) => void;
   onEnd: () => void;
-  onSelectClip: (kind: Drag['kind'], id: string, wordId: string | undefined, start: number, additive: boolean) => void;
+  onSelectClip: (kind: Drag['kind'], id: string, wordId: string | undefined, start: number, additive: boolean, seekOnSelect: boolean) => void;
   selected: Selection | null;
   selectedCueIds: string[];
   cue: Cue | undefined;
@@ -105,6 +105,34 @@ export const Timeline: React.FC<Props> = ({
         end: w.end,
         label: w.text
       })) : []
+    },
+    {
+      name: '⚡ MOTION GRAPHICS',
+      kind: 'overlay',
+      items: p.overlays.filter(o => o.kind === 'motion').map(o => {
+        let icon = '⚡';
+        if (o.motionType === 'scene') {
+          const s = o.motionProps?.scene;
+          icon = s === 'growth-graph' ? '📈' : s === 'target-lock' ? '🎯' : s === 'rocket-launch' ? '🚀' : s === 'stamp-impact' ? '💥' : s === 'hazard-warning' ? '⚠️' : s === 'hourglass' ? '⏳' : s === 'speed-gauge' ? '⚡' : '🧠';
+        } else if (o.motionType === 'kinetic-text') {
+          icon = '🔤';
+        } else if (o.motionType === 'stroke-path') {
+          icon = '✏️';
+        } else if (o.motionType === 'burst') {
+          icon = '✨';
+        } else if (o.motionType === 'speed-lines') {
+          icon = '⚡';
+        } else if (o.motionType === 'camera-shake') {
+          icon = '📳';
+        }
+        return {
+          id: o.id,
+          start: o.start,
+          end: o.end,
+          label: `${icon} ${o.name || o.text || 'Motion'}`,
+          subKind: 'motion'
+        };
+      })
     },
     {
       name: '🎬 B-ROLL',
@@ -303,6 +331,7 @@ export const Timeline: React.FC<Props> = ({
                     sourceStart={(item as any).sourceStart}
                     speed={(item as any).speed}
                     waveformColor={(item as any).waveformColor}
+                    subKind={(item as any).subKind}
                     onDown={onDown}
                     onMove={onMove}
                     onEnd={onEnd}
@@ -312,7 +341,8 @@ export const Timeline: React.FC<Props> = ({
                         item.id,
                         row.kind === 'word' ? item.id : undefined,
                         item.start,
-                        additive
+                        additive,
+                        (item as {subKind?: string}).subKind !== 'motion'
                       )
                     }
                   />

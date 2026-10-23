@@ -358,7 +358,21 @@ export const EditPanel: React.FC<Props> = ({
 
       {overlay && (
         <>
-          <div className="panelTag">Camada independente · {overlay.kind}</div>
+          <div
+            className="panelTag"
+            style={
+              overlay.kind === 'motion'
+                ? {
+                    background: 'rgba(124, 58, 237, 0.22)',
+                    borderColor: '#a855f7',
+                    color: '#f472b6',
+                    fontWeight: 800
+                  }
+                : undefined
+            }
+          >
+            {overlay.kind === 'motion' ? `⚡ Motion Graphics · ${overlay.motionType || 'Cena'}` : `Camada independente · ${overlay.kind}`}
+          </div>
           <label>
             Nome
             <input
@@ -366,6 +380,274 @@ export const EditPanel: React.FC<Props> = ({
               onChange={e => onEditLayer(overlay.id, {name: e.target.value})}
             />
           </label>
+
+          {overlay.kind === 'motion' && (
+            <div
+              style={{
+                background: '#1c1b27',
+                border: '1px solid #48386b',
+                borderRadius: 8,
+                padding: '12px 14px',
+                margin: '12px 0 16px'
+              }}
+            >
+              <label>
+                Tipo de Motion
+                <select
+                  value={overlay.motionType || 'kinetic-text'}
+                  onChange={e => {
+                    const mt = e.target.value as any;
+                    onEditLayer(overlay.id, {
+                      motionType: mt,
+                      name: `Motion ${mt}`,
+                      motionProps:
+                        mt === 'scene'
+                          ? {scene: 'growth-graph', label: 'CRESCIMENTO', metric: '+340%'}
+                          : mt === 'kinetic-text'
+                          ? {style: '3d-tilt', outline: true, backdropWord: 'FOCO'}
+                          : mt === 'stroke-path'
+                          ? {shape: 'curved-arrow', strokeWidth: 10, angle: -30}
+                          : mt === 'burst'
+                          ? {shape: 'spark', count: 16}
+                          : mt === 'speed-lines'
+                          ? {count: 24, intensity: 1}
+                          : {intensity: 16, decayFrames: 10}
+                    });
+                  }}
+                >
+                  <option value="scene">📈 Cena Semântica (Gráfico, Mira, Foguete...)</option>
+                  <option value="kinetic-text">🔤 Tipografia Cinética (3D, Stagger, Elastic)</option>
+                  <option value="stroke-path">✏️ Traço Vetorial (Seta, Círculo, Sublinhado)</option>
+                  <option value="burst">✨ Explosão de Partículas (Bursts)</option>
+                  <option value="speed-lines">⚡ Linhas de Ação / Speed Lines</option>
+                  <option value="camera-shake">📳 Tremor Sísmico de Câmera</option>
+                </select>
+              </label>
+
+              {overlay.motionType === 'scene' && (
+                <>
+                  <label>
+                    Cena Vetorial
+                    <select
+                      value={overlay.motionProps?.scene || 'growth-graph'}
+                      onChange={e =>
+                        onEditLayer(overlay.id, {
+                          motionProps: {...(overlay.motionProps || {}), scene: e.target.value}
+                        })
+                      }
+                    >
+                      <option value="growth-graph">📈 Gráfico Neon de Crescimento</option>
+                      <option value="target-lock">🎯 Mira Óptica HUD com Coordenadas</option>
+                      <option value="rocket-launch">🚀 Foguete Vetorial com Propulsão</option>
+                      <option value="stamp-impact">💥 Carimbo Giratório de Impacto</option>
+                      <option value="hazard-warning">⚠️ Faixas Zebradas de Alerta</option>
+                      <option value="hourglass">⏳ Ampulheta Geométrica com Areia</option>
+                      <option value="speed-gauge">⚡ Velocímetro no Limite Vermelho</option>
+                      <option value="neural-brain">🧠 Rede Neural com Pulsos de Luz</option>
+                    </select>
+                  </label>
+                  <label>
+                    Rótulo / Título da Cena
+                    <input
+                      value={overlay.motionProps?.label ?? overlay.motionProps?.text ?? overlay.text ?? ''}
+                      onChange={e =>
+                        onEditLayer(overlay.id, {
+                          text: e.target.value,
+                          motionProps: {
+                            ...(overlay.motionProps || {}),
+                            label: e.target.value,
+                            text: e.target.value
+                          }
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Métrica / Subtexto
+                    <input
+                      value={
+                        overlay.motionProps?.metric ??
+                        overlay.motionProps?.subtext ??
+                        overlay.motionProps?.speedText ??
+                        overlay.motionProps?.coordinates ??
+                        ''
+                      }
+                      onChange={e =>
+                        onEditLayer(overlay.id, {
+                          motionProps: {
+                            ...(overlay.motionProps || {}),
+                            metric: e.target.value,
+                            subtext: e.target.value,
+                            speedText: e.target.value,
+                            coordinates: e.target.value
+                          }
+                        })
+                      }
+                    />
+                  </label>
+                </>
+              )}
+
+              {overlay.motionType === 'kinetic-text' && (
+                <>
+                  <label>
+                    Texto Cinético
+                    <textarea
+                      rows={2}
+                      value={overlay.text ?? overlay.motionProps?.text ?? ''}
+                      onChange={e =>
+                        onEditLayer(overlay.id, {
+                          text: e.target.value,
+                          motionProps: {...(overlay.motionProps || {}), text: e.target.value}
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Estilo de Animação
+                    <select
+                      value={overlay.motionProps?.style || '3d-tilt'}
+                      onChange={e =>
+                        onEditLayer(overlay.id, {
+                          motionProps: {...(overlay.motionProps || {}), style: e.target.value}
+                        })
+                      }
+                    >
+                      <option value="3d-tilt">Rotação 3D com Perspectiva e Tilt</option>
+                      <option value="elastic-bounce">Mola Elástica (Elastic Bounce)</option>
+                      <option value="stagger-burst">Cascata de Letras (Stagger Delay)</option>
+                      <option value="stretch-squash">Esticar e Esmagar (Squash & Stretch)</option>
+                      <option value="backdrop-outline">Texto Gigante Vazado</option>
+                    </select>
+                  </label>
+                  <label>
+                    Palavra de Fundo (Backdrop Word)
+                    <input
+                      value={overlay.motionProps?.backdropWord ?? ''}
+                      placeholder="Ex: STOP, 10X, AGORA..."
+                      onChange={e =>
+                        onEditLayer(overlay.id, {
+                          motionProps: {...(overlay.motionProps || {}), backdropWord: e.target.value}
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="check" style={{marginTop: 8}}>
+                    <input
+                      type="checkbox"
+                      checked={overlay.motionProps?.outline ?? true}
+                      onChange={e =>
+                        onEditLayer(overlay.id, {
+                          motionProps: {...(overlay.motionProps || {}), outline: e.target.checked}
+                        })
+                      }
+                    />
+                    Borda / Outline Vazada
+                  </label>
+                </>
+              )}
+
+              {overlay.motionType === 'stroke-path' && (
+                <>
+                  <label>
+                    Formato do Traço (Trim Path)
+                    <select
+                      value={overlay.motionProps?.shape || overlay.type || 'curved-arrow'}
+                      onChange={e =>
+                        onEditLayer(overlay.id, {
+                          type: e.target.value as any,
+                          motionProps: {...(overlay.motionProps || {}), shape: e.target.value}
+                        })
+                      }
+                    >
+                      <option value="curved-arrow">↗ Seta Orgânica Curva</option>
+                      <option value="scribble-circle">⭕ Círculo Rabiscado Vivo</option>
+                      <option value="marker-underline">✏️ Marcador de Texto Sublinhado</option>
+                      <option value="target-reticle">🎯 Retículo de Foco Óptico</option>
+                      <option value="spiral-draw">🌀 Espiral Dinâmica</option>
+                    </select>
+                  </label>
+                  <InputNumber
+                    name="Espessura do Traço"
+                    value={overlay.strokeWidth ?? overlay.motionProps?.strokeWidth ?? 10}
+                    onChange={v =>
+                      onEditLayer(overlay.id, {
+                        strokeWidth: v,
+                        motionProps: {...(overlay.motionProps || {}), strokeWidth: v}
+                      })
+                    }
+                  />
+                  <InputNumber
+                    name="Ângulo de Rotação °"
+                    value={overlay.rotation ?? overlay.motionProps?.angle ?? 0}
+                    onChange={v =>
+                      onEditLayer(overlay.id, {
+                        rotation: v,
+                        motionProps: {...(overlay.motionProps || {}), angle: v}
+                      })
+                    }
+                  />
+                </>
+              )}
+
+              {overlay.motionType === 'burst' && (
+                <>
+                  <label>
+                    Forma das Partículas
+                    <select
+                      value={overlay.motionProps?.shape || 'spark'}
+                      onChange={e =>
+                        onEditLayer(overlay.id, {
+                          motionProps: {...(overlay.motionProps || {}), shape: e.target.value}
+                        })
+                      }
+                    >
+                      <option value="spark">Faíscas Radiantes (Sparks)</option>
+                      <option value="star">Estrelas Geométricas (Stars)</option>
+                      <option value="diamond">Losangos / Diamantes</option>
+                    </select>
+                  </label>
+                  <InputNumber
+                    name="Quantidade de Partículas"
+                    value={overlay.motionProps?.count ?? 16}
+                    onChange={v =>
+                      onEditLayer(overlay.id, {
+                        motionProps: {
+                          ...(overlay.motionProps || {}),
+                          count: Math.max(4, Math.min(48, Math.round(v)))
+                        }
+                      })
+                    }
+                  />
+                </>
+              )}
+
+              {overlay.motionType === 'speed-lines' && (
+                <InputNumber
+                  name="Intensidade das Linhas"
+                  value={overlay.motionProps?.intensity ?? 1}
+                  onChange={v =>
+                    onEditLayer(overlay.id, {
+                      motionProps: {...(overlay.motionProps || {}), intensity: clamp(v, 0.2, 3)}
+                    })
+                  }
+                />
+              )}
+
+              <label className="check" style={{marginTop: 8}}>
+                <input
+                  type="checkbox"
+                  checked={!!overlay.motionProps?.cameraShake}
+                  onChange={e =>
+                    onEditLayer(overlay.id, {
+                      motionProps: {...(overlay.motionProps || {}), cameraShake: e.target.checked}
+                    })
+                  }
+                />
+                📳 Tremor Sísmico de Câmera no Impacto
+              </label>
+            </div>
+          )}
           {overlay.kind === 'text' && (
             <>
               <label>
@@ -389,7 +671,8 @@ export const EditPanel: React.FC<Props> = ({
               </label>
             </>
           )}
-          {colorField('Cor', overlay.color ?? '#ffffff', v => onEditLayer(overlay.id, {color: v}))}
+          {overlay.kind !== 'audio' && overlay.kind !== 'video' &&
+            colorField('Cor', overlay.color ?? '#ffffff', v => onEditLayer(overlay.id, {color: v}))}
           <div className="duo">
             <InputNumber
               name="Início"
@@ -406,41 +689,222 @@ export const EditPanel: React.FC<Props> = ({
               }
             />
           </div>
-          <div className="duo">
-            <InputNumber
-              name="X %"
-              value={overlay.x}
-              onChange={v => onEditLayer(overlay.id, {x: v})}
-            />
-            <InputNumber
-              name="Y %"
-              value={overlay.y}
-              onChange={v => onEditLayer(overlay.id, {y: v})}
-            />
-          </div>
-          <div className="duo">
-            <InputNumber
-              name="Escala"
-              value={overlay.scale}
-              onChange={v => onEditLayer(overlay.id, {scale: v})}
-            />
-            <InputNumber
-              name="Rotação °"
-              value={overlay.rotation}
-              onChange={v => onEditLayer(overlay.id, {rotation: v})}
-            />
-          </div>
-          <InputNumber
-            name="Opacidade (0–1)"
-            value={overlay.opacity}
-            onChange={v => onEditLayer(overlay.id, {opacity: clamp(v, 0, 1)})}
-          />
+          {overlay.kind !== 'audio' && (
+            <>
+              <div className="duo">
+                <InputNumber
+                  name="X %"
+                  value={overlay.x}
+                  onChange={v => onEditLayer(overlay.id, {x: v})}
+                />
+                <InputNumber
+                  name="Y %"
+                  value={overlay.y}
+                  onChange={v => onEditLayer(overlay.id, {y: v})}
+                />
+              </div>
+              <div className="duo">
+                <InputNumber
+                  name="Escala"
+                  value={overlay.scale}
+                  onChange={v => onEditLayer(overlay.id, {scale: v})}
+                />
+                <InputNumber
+                  name="Rotação °"
+                  value={overlay.rotation}
+                  onChange={v => onEditLayer(overlay.id, {rotation: v})}
+                />
+              </div>
+              <InputNumber
+                name="Opacidade (0–1)"
+                value={overlay.opacity}
+                onChange={v => onEditLayer(overlay.id, {opacity: clamp(v, 0, 1)})}
+              />
+            </>
+          )}
           {overlay.kind === 'audio' && (
-            <InputNumber
-              name="Volume (0–2)"
-              value={overlay.volume ?? 1}
-              onChange={v => onEditLayer(overlay.id, {volume: clamp(v, 0, 2)})}
-            />
+            <div
+              style={{
+                background: '#191b24',
+                border: '1px solid #3d3b54',
+                borderRadius: 8,
+                padding: '14px 16px',
+                margin: '14px 0 16px'
+              }}
+            >
+              <div className="sectionLine" style={{marginTop: 0}}>🎚️ MIXER DE ÁUDIO · TRILHA</div>
+
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
+                <span style={{fontSize: 13, fontWeight: 700, color: '#e8bb54'}}>
+                  {overlay.muted || (overlay.volume ?? 1) === 0
+                    ? '🔇 Mudo (0%)'
+                    : `🔊 Volume: ${Math.round(clamp(overlay.volume ?? 1, 0, 1) * 100)}%`}
+                </span>
+                <button
+                  type="button"
+                  style={{
+                    width: 'auto',
+                    padding: '5px 12px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    background: overlay.muted ? '#64282e' : '#2b303c',
+                    borderColor: overlay.muted ? '#ff6663' : '#454a58',
+                    color: overlay.muted ? '#ffb6b8' : '#e8e8ee'
+                  }}
+                  onClick={() => onEditLayer(overlay.id, {muted: !overlay.muted})}
+                >
+                  {overlay.muted ? '🔊 Desmutar' : '🔇 Silenciar'}
+                </button>
+              </div>
+
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={overlay.muted ? 0 : Math.round(clamp(overlay.volume ?? 1, 0, 1) * 100)}
+                onChange={e => {
+                  const pct = Number(e.target.value);
+                  onEditLayer(overlay.id, {
+                    volume: pct / 100,
+                    muted: pct === 0
+                  });
+                }}
+              />
+
+              <div style={{display: 'flex', gap: 6, marginTop: 10}}>
+                {[0, 25, 50, 75, 100].map(pct => {
+                  const isActive =
+                    (!overlay.muted && Math.round((overlay.volume ?? 1) * 100) === pct) ||
+                    (overlay.muted && pct === 0);
+                  return (
+                    <button
+                      key={pct}
+                      type="button"
+                      style={{
+                        flex: 1,
+                        padding: '5px 0',
+                        fontSize: 11,
+                        fontWeight: isActive ? 800 : 500,
+                        background: isActive ? '#4a3b22' : '#222530',
+                        borderColor: isActive ? '#e8bb54' : '#393d4a',
+                        color: isActive ? '#f6d780' : '#aaa'
+                      }}
+                      onClick={() => onEditLayer(overlay.id, {volume: pct / 100, muted: pct === 0})}
+                    >
+                      {pct}%
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{marginTop: 16, borderTop: '1px solid #2f3242', paddingTop: 12}}>
+                <label className="check" style={{marginBottom: 8}}>
+                  <input
+                    type="checkbox"
+                    checked={overlay.ducking !== false}
+                    onChange={e => onEditLayer(overlay.id, {ducking: e.target.checked})}
+                  />
+                  <span>🎙️ <strong>Auto-Ducking Inteligente</strong></span>
+                </label>
+                <p className="help" style={{margin: '4px 0 10px', fontSize: 11}}>
+                  Reduz o volume da música automaticamente enquanto houver falas ou legendas ativas no vídeo.
+                </p>
+                {overlay.ducking !== false && (
+                  <div style={{background: '#14161f', padding: '10px 12px', borderRadius: 6, border: '1px solid #2a2d3d'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 4}}>
+                      <span style={{fontSize: 11, color: '#c4c6ce'}}>Volume durante a fala</span>
+                      <strong style={{color: '#e8bb54', fontSize: 12}}>{Math.round((overlay.duckingAmount ?? 0.28) * 100)}%</strong>
+                    </div>
+                    <input
+                      type="range"
+                      min="5"
+                      max="60"
+                      step="1"
+                      value={Math.round((overlay.duckingAmount ?? 0.28) * 100)}
+                      onChange={e => onEditLayer(overlay.id, {duckingAmount: Number(e.target.value) / 100})}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {overlay.kind === 'video' && (
+            <div
+              style={{
+                background: '#191b24',
+                border: '1px solid #3d3b54',
+                borderRadius: 8,
+                padding: '14px 16px',
+                margin: '14px 0 16px'
+              }}
+            >
+              <div className="sectionLine" style={{marginTop: 0}}>🎚️ ÁUDIO DO B-ROLL</div>
+
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
+                <span style={{fontSize: 13, fontWeight: 700, color: '#e8bb54'}}>
+                  {overlay.muted || (overlay.volume ?? 1) === 0
+                    ? '🔇 B-Roll Mudo (0%)'
+                    : `🔊 Volume: ${Math.round(clamp(overlay.volume ?? 1, 0, 1) * 100)}%`}
+                </span>
+                <button
+                  type="button"
+                  style={{
+                    width: 'auto',
+                    padding: '5px 12px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    background: overlay.muted ? '#64282e' : '#2b303c',
+                    borderColor: overlay.muted ? '#ff6663' : '#454a58',
+                    color: overlay.muted ? '#ffb6b8' : '#e8e8ee'
+                  }}
+                  onClick={() => onEditLayer(overlay.id, {muted: !overlay.muted})}
+                >
+                  {overlay.muted ? '🔊 Desmutar' : '🔇 Silenciar'}
+                </button>
+              </div>
+
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={overlay.muted ? 0 : Math.round(clamp(overlay.volume ?? 1, 0, 1) * 100)}
+                onChange={e => {
+                  const pct = Number(e.target.value);
+                  onEditLayer(overlay.id, {
+                    volume: pct / 100,
+                    muted: pct === 0
+                  });
+                }}
+              />
+
+              <div style={{display: 'flex', gap: 6, marginTop: 10}}>
+                {[0, 25, 50, 75, 100].map(pct => {
+                  const isActive =
+                    (!overlay.muted && Math.round((overlay.volume ?? 1) * 100) === pct) ||
+                    (overlay.muted && pct === 0);
+                  return (
+                    <button
+                      key={pct}
+                      type="button"
+                      style={{
+                        flex: 1,
+                        padding: '5px 0',
+                        fontSize: 11,
+                        fontWeight: isActive ? 800 : 500,
+                        background: isActive ? '#4a3b22' : '#222530',
+                        borderColor: isActive ? '#e8bb54' : '#393d4a',
+                        color: isActive ? '#f6d780' : '#aaa'
+                      }}
+                      onClick={() => onEditLayer(overlay.id, {volume: pct / 100, muted: pct === 0})}
+                    >
+                      {pct}%
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </>
       )}
@@ -486,14 +950,81 @@ export const EditPanel: React.FC<Props> = ({
               onChange={v => onEditClip(clip.id, {x: v})}
             />
           </div>
-          <label className="check">
+          <div
+            style={{
+              background: '#191b24',
+              border: '1px solid #3d3b54',
+              borderRadius: 8,
+              padding: '14px 16px',
+              margin: '12px 0 16px'
+            }}
+          >
+            <div className="sectionLine" style={{marginTop: 0}}>🎚️ ÁUDIO DO CLIPE DE VÍDEO</div>
+
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8}}>
+              <span style={{fontSize: 13, fontWeight: 700, color: '#e8bb54'}}>
+                {clip.muted || (clip.volume ?? 1) === 0
+                  ? '🔇 Mudo (0%)'
+                  : `🔊 Volume: ${Math.round(clamp(clip.volume ?? 1, 0, 1) * 100)}%`}
+              </span>
+              <button
+                type="button"
+                style={{
+                  width: 'auto',
+                  padding: '5px 12px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  background: clip.muted ? '#64282e' : '#2b303c',
+                  borderColor: clip.muted ? '#ff6663' : '#454a58',
+                  color: clip.muted ? '#ffb6b8' : '#e8e8ee'
+                }}
+                onClick={() => onEditClip(clip.id, {muted: !clip.muted})}
+              >
+                {clip.muted ? '🔊 Desmutar' : '🔇 Silenciar'}
+              </button>
+            </div>
+
             <input
-              type="checkbox"
-              checked={!!clip.muted}
-              onChange={e => onEditClip(clip.id, {muted: e.target.checked})}
-            />{' '}
-            Silenciar este trecho
-          </label>
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={clip.muted ? 0 : Math.round(clamp(clip.volume ?? 1, 0, 1) * 100)}
+              onChange={e => {
+                const pct = Number(e.target.value);
+                onEditClip(clip.id, {
+                  volume: pct / 100,
+                  muted: pct === 0
+                });
+              }}
+            />
+
+            <div style={{display: 'flex', gap: 6, marginTop: 10}}>
+              {[0, 25, 50, 75, 100].map(pct => {
+                const isActive =
+                  (!clip.muted && Math.round((clip.volume ?? 1) * 100) === pct) ||
+                  (clip.muted && pct === 0);
+                return (
+                  <button
+                    key={pct}
+                    type="button"
+                    style={{
+                      flex: 1,
+                      padding: '5px 0',
+                      fontSize: 11,
+                      fontWeight: isActive ? 800 : 500,
+                      background: isActive ? '#4a3b22' : '#222530',
+                      borderColor: isActive ? '#e8bb54' : '#393d4a',
+                      color: isActive ? '#f6d780' : '#aaa'
+                    }}
+                    onClick={() => onEditClip(clip.id, {volume: pct / 100, muted: pct === 0})}
+                  >
+                    {pct}%
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="sectionLine">TRANSIÇÃO DE ENTRADA</div>
           <label>
             Tipo de transição

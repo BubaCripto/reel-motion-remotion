@@ -48,3 +48,45 @@ test('smart audio ducking identifies active speech intervals accurately', () => 
   // After c2
   assert.equal(isDucking(9.0, cues), 0.8);
 });
+
+test('audio volume levels and mute states are clamped and evaluated correctly', () => {
+  const clampVol = (vol?: number, muted?: boolean) => {
+    if (muted) return 0;
+    const v = vol ?? 1;
+    return Math.min(1, Math.max(0, v));
+  };
+
+  // Default volume is 100% (1)
+  assert.equal(clampVol(undefined, false), 1);
+  assert.equal(clampVol(1, false), 1);
+
+  // Lowered volume (e.g. 30%)
+  assert.equal(clampVol(0.3, false), 0.3);
+
+  // Muted volume returns 0 regardless of volume value
+  assert.equal(clampVol(0.7, true), 0);
+  assert.equal(clampVol(1.0, true), 0);
+
+  // Values clamped between 0 and 1
+  assert.equal(clampVol(-0.5, false), 0);
+  assert.equal(clampVol(1.5, false), 1);
+});
+
+test('custom ducking attenuation scales background audio according to slider percentage', () => {
+  const cues: Cue[] = [{id: 'speech-1', start: 2.0, end: 5.0, text: 'Fala ativa'}];
+
+  const calcVolume = (time: number, baseVol: number, duckingAmount: number, muted = false) => {
+    if (muted) return 0;
+    const isSpeaking = cues.some(c => time >= (c.start - 0.08) && time <= (c.end + 0.12));
+    const ratio = Math.min(1, Math.max(0, duckingAmount));
+    return isSpeaking ? baseVol * ratio : baseVol;
+  };
+
+  // Base volume 80%, ducking at 15%
+  assert.equal(calcVolume(1.0, 0.8, 0.15), 0.8); // silence
+  assert.ok(Math.abs(calcVolume(3.0, 0.8, 0.15) - 0.12) < 0.001); // speaking: 0.8 * 0.15 = 0.12
+
+  // Base volume 50%, ducking at 40%
+  assert.equal(calcVolume(1.0, 0.5, 0.40), 0.5); // silence
+  assert.ok(Math.abs(calcVolume(3.0, 0.5, 0.40) - 0.20) < 0.001); // speaking: 0.5 * 0.40 = 0.20
+});

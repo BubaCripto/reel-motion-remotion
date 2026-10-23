@@ -27,6 +27,25 @@ import {loadFont as loadLibre} from '@remotion/google-fonts/LibreBaskerville';
 const map:Record<string,string>={Anton:loadAnton().fontFamily,'Playfair Display':loadPlayfair().fontFamily,Montserrat:loadMontserrat().fontFamily,Oswald:loadOswald().fontFamily,Inter:loadInter().fontFamily,Caveat:loadCaveat().fontFamily,'Libre Baskerville':loadLibre().fontFamily};
 const font=(s?:string)=>map[s||'']||s||'Arial';
 const media=(src?:string)=>!src?'':src.startsWith('/media/')||src.startsWith('/sfx/')||src==='/demo-grid.svg'?staticFile(src.slice(1)):src;
+
+/**
+ * Motion layers can arrive from the director, templates and older JSON files.
+ * If one visual layer is malformed, it must not unmount the entire Player and
+ * hide the main video. The failed layer is simply omitted until it is edited.
+ */
+class LayerErrorBoundary extends React.Component<{
+ layerKey:string;
+ children:React.ReactNode;
+},{failed:boolean}> {
+ state={failed:false};
+ static getDerivedStateFromError(){return {failed:true};}
+ componentDidCatch(error:Error){console.warn('Camada ignorada no preview porque não pôde ser renderizada:',error);}
+ componentDidUpdate(previous:Readonly<{layerKey:string}>){
+  if(this.state.failed&&previous.layerKey!==this.props.layerKey)this.setState({failed:false});
+ }
+ render(){return this.state.failed?null:this.props.children;}
+}
+
 const rand=(seed:number,i:number)=>{const n=Math.sin(seed*78.233+i*12.989)*43758.5453;return n-Math.floor(n)};
 function motion(preset:Preset,enter:number,frame:number,i:number,intensity:number,random:number):React.CSSProperties{
  const off=1-enter;
@@ -105,11 +124,12 @@ const OverlayView:React.FC<{layer:Overlay;cues?:Cue[]}>=({layer:l,cues})=>{
  const intro=spring({frame,fps,config:{damping:14,stiffness:115}}),outro=interpolate(frame,[Math.max(0,(l.end-l.start)*fps-7),Math.max(1,(l.end-l.start)*fps)],[1,0],{extrapolateLeft:'clamp',extrapolateRight:'clamp'});
  if(l.kind==='audio'){
   if(!l.src)return null;
-  const baseVol=clamp(l.volume??1,0,2);
+  if(l.muted)return <Audio src={media(l.src)} volume={0}/>;
+  const baseVol=clamp(l.volume??1,0,1);
   let finalVol=baseVol;
   if(l.ducking!==false&&cues?.length){
    const isSpeaking=cues.some(c=>now>=(c.start-0.08)&&now<=(c.end+0.12));
-   const duckRatio=l.duckingAmount??0.28;
+   const duckRatio=clamp(l.duckingAmount??0.28,0,1);
    finalVol=isSpeaking?baseVol*duckRatio:baseVol;
   }
   return <Audio src={media(l.src)} volume={finalVol}/>;
@@ -120,7 +140,7 @@ const OverlayView:React.FC<{layer:Overlay;cues?:Cue[]}>=({layer:l,cues})=>{
  if((l.kind==='image'||l.kind==='video')&&!l.src)return null;
  const style:React.CSSProperties={position:'absolute',left:`${x}%`,top:`${y}%`,transform:`translate(-50%,-50%) rotate(${rotate}deg) scale(${scale*(l.mediaRole==='broll'?1:.7+.3*intro)})`,opacity:opacity*outro,width:l.kind==='image'||l.kind==='video'?`${l.frameWidth??(l.kind==='video'?100:50)}%`:undefined,height:l.frameHeight?`${l.frameHeight}%`:undefined,textAlign:'center',pointerEvents:'none'};
  if(l.kind==='image'&&l.src)return <AbsoluteFill><Img src={media(l.src)} style={{...style,objectFit:l.mediaRole==='broll'?'cover':'contain'}}/></AbsoluteFill>;
- if(l.kind==='video'&&l.src)return <AbsoluteFill><OffthreadVideo src={media(l.src)} startFrom={Math.round((l.sourceStart??0)*fps)} playbackRate={l.speed??1} muted={l.muted??true} pauseWhenBuffering={false} style={{...style,objectFit:'cover'}}/></AbsoluteFill>;
+ if(l.kind==='video'&&l.src)return <AbsoluteFill><OffthreadVideo src={media(l.src)} startFrom={Math.round((l.sourceStart??0)*fps)} playbackRate={l.speed??1} muted={l.muted??true} volume={l.muted?0:clamp(l.volume??1,0,1)} pauseWhenBuffering={false} style={{...style,objectFit:'cover'}}/></AbsoluteFill>;
  if(l.kind==='text')return <AbsoluteFill><div style={{...style,whiteSpace:'pre-wrap',maxWidth:'92%',fontFamily:font(l.fontA),fontSize:100,fontWeight:l.fontWeight??800,color:l.color??'#fff',WebkitTextStroke:l.strokeWidth?`${l.strokeWidth}px ${l.strokeColor??'#000'}`:undefined,paintOrder:'stroke fill',textShadow:'0 4px 8px #000a'}}>{l.text}</div></AbsoluteFill>;
  if(l.kind==='effect'&&l.type==='zoom-pulse')return null;
  if(l.type==='scribble')return <AbsoluteFill><svg style={{position:'absolute',left:`${x}%`,top:`${y}%`,width:`${scale*500}px`,height:`${scale*200}px`,transform:`translate(-50%,-50%) rotate(${rotate}deg)`,opacity:opacity}} viewBox="0 0 500 200"><path d="M42 105 C88 8 433 8 457 103 C489 190 55 207 42 105" fill="none" stroke={l.color??'#eac34b'} strokeWidth={l.strokeWidth??12} strokeLinecap="round" strokeDasharray="1150" strokeDashoffset={1150*(1-intro)}/></svg></AbsoluteFill>;
@@ -207,6 +227,7 @@ const VideoLayer:React.FC<{clip:VideoClip;p:ReelProject}>=({clip,p})=>{
        startFrom={Math.round(clip.sourceStart*fps)}
        playbackRate={clip.speed}
        muted={clip.muted}
+       volume={clip.muted?0:clamp(clip.volume??1,0,1)}
        pauseWhenBuffering={false}
        style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:`${x}% ${y}%`,transform:`scale(${zoom})`}}
      />
@@ -221,10 +242,13 @@ export const ReelVideo:React.FC<{project:ReelProject}>=({project:p})=>{
  const frame=useCurrentFrame();
  const legacy=!p.clips?.length&&p.videoSrc;
  const layers=[...(p.overlays??[])].sort((a,b)=>a.track-b.track),isBroll=(l:Overlay)=>l.kind==='video'||l.mediaRole==='broll';
- const renderLayer=(layer:Overlay)=><Sequence key={layer.id} premountFor={p.fps} from={Math.max(0,Math.round(layer.start*p.fps))} durationInFrames={Math.max(1,Math.round((layer.end-layer.start)*p.fps))}><OverlayView layer={layer} cues={p.cues}/></Sequence>;
+ const renderLayer=(layer:Overlay)=>{
+  const layerKey=[layer.id,layer.kind,layer.motionType,layer.start,layer.end,layer.text,layer.color,layer.x,layer.y,layer.scale,layer.rotation,layer.opacity,JSON.stringify(layer.motionProps??{})].join('|');
+  return <LayerErrorBoundary key={layer.id} layerKey={layerKey}><Sequence premountFor={p.fps} from={Math.max(0,Math.round(layer.start*p.fps))} durationInFrames={Math.max(1,Math.round((layer.end-layer.start)*p.fps))}><OverlayView layer={layer} cues={p.cues}/></Sequence></LayerErrorBoundary>;
+ };
 
  const now=frame/p.fps;
- const activeShake=layers.find(l=>l.kind==='motion'&&(l.motionType==='camera-shake'||l.motionProps?.cameraShake)&&now>=l.start&&now<=l.end);
+ const activeShake=layers.find(l=>l.kind==='motion'&&(l.motionType==='camera-shake'||l.motionProps?.cameraShake)&&now>=l.start&&now<l.end);
  const shakeFrame=activeShake?Math.round((now-activeShake.start)*p.fps):0;
  const shakeDecay=activeShake?Math.max(1,Math.round((activeShake.end-activeShake.start)*p.fps)):10;
  const shakeIntensity=activeShake?.motionProps?.intensity??16;
@@ -243,9 +267,9 @@ export const ReelVideo:React.FC<{project:ReelProject}>=({project:p})=>{
   </AbsoluteFill>
  );
 
- return activeShake?(
-  <CameraShakeWrapper frame={shakeFrame} intensity={shakeIntensity} decayFrames={shakeDecay}>
+ return (
+  <CameraShakeWrapper active={!!activeShake} frame={shakeFrame} intensity={shakeIntensity} decayFrames={shakeDecay}>
    {content}
   </CameraShakeWrapper>
- ):content;
+ );
 };

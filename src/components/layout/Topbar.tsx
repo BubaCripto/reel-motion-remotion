@@ -6,6 +6,7 @@ type Props = {
   project: ReelProject;
   renderJob: string;
   onAnalyzeRhythm: () => void;
+  onNewProject?: () => void;
   onLoadDemo: () => void;
   onPickVideo: () => void;
   onPickSrt: () => void;
@@ -23,6 +24,7 @@ export const Topbar: React.FC<Props> = ({
   project,
   renderJob,
   onAnalyzeRhythm,
+  onNewProject,
   onLoadDemo,
   onPickVideo,
   onPickSrt,
@@ -77,6 +79,25 @@ export const Topbar: React.FC<Props> = ({
             <option value="cyber-neon">⚡ Cyber Neon</option>
             <option value="monochrome">🎞 P&B Contrast</option>
           </select>
+        )}
+
+        {onNewProject && (
+          <button
+            onClick={onNewProject}
+            style={{
+              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+              color: '#ffffff',
+              borderColor: '#818cf8',
+              fontWeight: 700,
+              boxShadow: '0 2px 10px rgba(99, 102, 241, 0.35)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5
+            }}
+            title="Começar um projeto do zero importando um vídeo"
+          >
+            ✨ Novo Projeto
+          </button>
         )}
 
         <button onClick={onAnalyzeRhythm}>✦ Analisar ritmo</button>

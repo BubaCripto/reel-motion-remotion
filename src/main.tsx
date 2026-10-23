@@ -23,6 +23,8 @@ import {
   RIGHT_PANEL_MAX,
   computeInitialPanelWidths,
   ASPECT_RATIOS,
+  detectAspectRatio,
+  createBlankProject,
   type AspectRatioPreset,
   type ColorGradePreset,
   type CueStylePatch,
@@ -32,6 +34,7 @@ import {
   type ReelProject,
   type VideoClip,
   type Overlay,
+  type MotionOverlayType,
   type Preset
 } from './lib/project';
 import {RhythmPanel} from './features/rhythm/RhythmPanel';
@@ -318,12 +321,29 @@ function ProjectStudio() {
       setP(v => ({...v, clips: [c], videoSrc: '', videoDuration}));
       select({kind: 'clip', id: c.id});
       seek(0);
-      notify('Vídeo otimizado para preview. A agulha pode ser movida com precisão.');
+      notify(`Vídeo importado (${seconds(videoDuration)}). Timeline ajustada no formato vertical.`);
     } catch (e) {
       setError(String(e));
     } finally {
       setRenderJob('');
     }
+  };
+
+  const triggerNewProject = () => {
+    if (history.current.length > 0) {
+      const ok = window.confirm('Iniciar um novo projeto do zero? As alterações não salvas no projeto atual serão descartadas.');
+      if (!ok) return;
+    }
+    const cleanProject = createBlankProject('Novo Projeto');
+    history.current = [];
+    player.current?.pause();
+    setPlaying(false);
+    setP(cleanProject);
+    setSelectedCueIds([]);
+    select(null);
+    seek(0);
+    setPanel('edit');
+    notify('✨ Novo projeto em branco criado (formato vertical 9:16). Use o botão "+ Vídeo" para importar seu arquivo.');
   };
 
   const sourceRates = useSourceFrameRates(p);
@@ -572,6 +592,55 @@ function ProjectStudio() {
       opacity: 1,
       color: kind === 'effect' ? '#ffffff' : '#f3c34f',
       fontA: p.fontA
+    };
+    change({overlays: [...p.overlays, o]});
+    select({kind: 'overlay', id: o.id});
+    setPanel('edit');
+  };
+
+  const addMotionOverlay = (type: MotionOverlayType) => {
+    const o: Overlay = {
+      id: uid(),
+      kind: 'motion',
+      motionType: type,
+      name:
+        type === 'scene'
+          ? 'Cena Gráfico'
+          : type === 'kinetic-text'
+          ? 'Texto Cinético'
+          : type === 'stroke-path'
+          ? 'Trim Path Seta'
+          : type === 'burst'
+          ? 'Explosão Burst'
+          : type === 'speed-lines'
+          ? 'Speed Lines'
+          : type === 'camera-shake'
+          ? 'Camera Shake'
+          : `Motion ${type}`,
+      text: type === 'kinetic-text' ? 'TEXTO CINÉTICO' : undefined,
+      start: cursor,
+      end: Math.max(cursor + 0.4, Math.min(duration, cursor + 2.5)),
+      track: 3,
+      x: 50,
+      y: type === 'kinetic-text' ? 25 : 50,
+      scale: 1,
+      rotation: 0,
+      opacity: 1,
+      color: p.accent,
+      motionProps:
+        type === 'scene'
+          ? {scene: 'growth-graph', label: 'RESULTADOS', metric: '+340%'}
+          : type === 'kinetic-text'
+          ? {style: '3d-tilt', outline: true, backdropWord: 'FOCO'}
+          : type === 'stroke-path'
+          ? {shape: 'curved-arrow', strokeWidth: 10, angle: -30}
+          : type === 'burst'
+          ? {shape: 'spark', count: 16}
+          : type === 'speed-lines'
+          ? {intensity: 1, count: 24}
+          : type === 'camera-shake'
+          ? {intensity: 16, decayFrames: 10}
+          : {}
     };
     change({overlays: [...p.overlays, o]});
     select({kind: 'overlay', id: o.id});
@@ -1601,6 +1670,7 @@ function ProjectStudio() {
         project={p}
         renderJob={renderJob}
         onAnalyzeRhythm={() => setPanel('rhythm')}
+        onNewProject={triggerNewProject}
         onLoadDemo={loadDemo}
         onPickVideo={() => pickerVideo.current?.click()}
         onPickSrt={() => pickerSrt.current?.click()}
@@ -1697,6 +1767,7 @@ function ProjectStudio() {
               addText={addText}
               onSetAddText={setAddText}
               onAddOverlay={addOverlay}
+              onAddMotionOverlay={addMotionOverlay}
               onPickImage={() => pickerImage.current?.click()}
               onInsertCue={insertCue}
               onAnalyzeAudio={analyzeAudio}
@@ -1766,6 +1837,7 @@ function ProjectStudio() {
               project={p}
               renderJob={renderJob}
               batchFiles={batchFiles}
+              onNewProject={triggerNewProject}
               onSave={save}
               onOpenProject={v => {
                 rec();
@@ -1904,7 +1976,7 @@ function ProjectStudio() {
         onDown={onTimelinePointer}
         onMove={onTimelineMove}
         onEnd={onPointerEnd}
-        onSelectClip={(kind, id, wordId, start, additive) => {
+        onSelectClip={(kind, id, wordId, start, additive, seekOnSelect) => {
           if (kind === 'cue') {
             setSelectedCueIds(current => {
               const target = p.cues.find(c => c.id === id);
@@ -1922,7 +1994,11 @@ function ProjectStudio() {
             });
           }
           select({kind, id, wordId});
-          seek(start);
+          // Selecting a motion layer must only select it. Seeking into a
+          // generated layer while the Player is reconciling can interrupt the
+          // video decoder and leave the preview black. The playhead remains
+          // under the user's control via the ruler or playhead drag.
+          if (seekOnSelect) seek(start);
           setPanel('edit');
         }}
         selected={selected}

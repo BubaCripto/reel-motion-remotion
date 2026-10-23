@@ -14,6 +14,7 @@ type Props = {
   onPickJson: () => void;
   onBatchRender: () => void;
   onCleanStorage?: () => void;
+  onNewProject?: () => void;
 };
 
 export const LibraryPanel: React.FC<Props> = ({
@@ -27,11 +28,28 @@ export const LibraryPanel: React.FC<Props> = ({
   onDeleteProject,
   onPickJson,
   onBatchRender,
-  onCleanStorage
+  onCleanStorage,
+  onNewProject
 }) => {
   return (
     <div className="fields">
       <h3>PROJETOS SALVOS</h3>
+      {onNewProject && (
+        <button
+          onClick={onNewProject}
+          style={{
+            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+            color: '#fff',
+            borderColor: '#818cf8',
+            fontWeight: 700,
+            padding: '10px 14px',
+            marginBottom: 12,
+            boxShadow: '0 2px 10px rgba(99, 102, 241, 0.3)'
+          }}
+        >
+          ✨ Iniciar Novo Projeto do Zero
+        </button>
+      )}
       <div className="buttonRow">
         <button onClick={onSave}>Salvar atual</button>
         <button onClick={() => saveJson(project)}>Exportar JSON</button>

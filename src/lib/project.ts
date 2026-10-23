@@ -11,7 +11,7 @@ export type TransitionType = 'none' | 'crossfade' | 'zoom-in' | 'zoom-out' | 'wh
 export type Keyframe = {time:number; x?:number;y?:number;scale?:number;rotate?:number;opacity?:number};
 export type Word = {id:string;text:string;highlight?:boolean;start:number;end:number; preset?:Preset;accent?:string;scale?:number;offsetX?:number;offsetY?:number};
 export type Cue = {id:string;start:number;end:number;text:string;source?:'transcript'|'manual';x?:number;y?:number;scale?:number;preset?:Preset;fontA?:string;fontB?:string;twoFonts?:boolean;fontWeight?:number;italic?:boolean;align?:'left'|'center'|'right';strokeWidth?:number;strokeColor?:string;highlightMode?:'color'|'box'|'underline'|'outline';accent?:string;foreground?:string;animationSpeed?:number;track?:number; keyframes?:Keyframe[];words?:Word[];rotation?:number;opacity?:number;outlineFill?:boolean;karaoke?:boolean};
-export type VideoClip = {id:string;src:string;start:number;end:number;sourceStart:number;speed:number;muted?:boolean;zoom?:number;x?:number;y?:number;keyframes?:Keyframe[];transition?:{type:TransitionType;duration?:number}};
+export type VideoClip = {id:string;src:string;start:number;end:number;sourceStart:number;speed:number;muted?:boolean;volume?:number;zoom?:number;x?:number;y?:number;keyframes?:Keyframe[];transition?:{type:TransitionType;duration?:number}};
 export type ColorGradePreset = 'none' | 'teal-orange' | 'moody-dark' | 'clean-bright' | 'cyber-neon' | 'monochrome';
 export const COLOR_GRADE_STYLES: Record<ColorGradePreset, { filter: string; overlayGradient?: string }> = {
   'none': { filter: 'none' },
@@ -43,6 +43,48 @@ export const ASPECT_RATIOS: Record<AspectRatioPreset, { width: number; height: n
   '1:1': { width: 1080, height: 1080, label: '1:1 (Feed Quadrado)' },
   '16:9': { width: 1920, height: 1080, label: '16:9 (YouTube)' },
 };
+
+export function detectAspectRatio(width: number, height: number): { ratio: AspectRatioPreset; width: number; height: number; label: string } {
+  if (!width || !height) return { ratio: '9:16', ...ASPECT_RATIOS['9:16'] };
+  const r = width / height;
+  if (r >= 1.45) return { ratio: '16:9', ...ASPECT_RATIOS['16:9'] };
+  if (r >= 0.92 && r <= 1.08) return { ratio: '1:1', ...ASPECT_RATIOS['1:1'] };
+  if (r >= 0.72 && r < 0.92) return { ratio: '4:5', ...ASPECT_RATIOS['4:5'] };
+  return { ratio: '9:16', ...ASPECT_RATIOS['9:16'] };
+}
+
+export function createBlankProject(name = 'Novo Projeto', options: Partial<ReelProject> = {}): ReelProject {
+  const ratio = options.aspectRatio ?? '9:16';
+  const dimensions = ASPECT_RATIOS[ratio] || ASPECT_RATIOS['9:16'];
+  return {
+    exportFpsMode: 'source',
+    id: uid(),
+    name,
+    fps: 30,
+    width: options.width ?? dimensions.width,
+    height: options.height ?? dimensions.height,
+    aspectRatio: ratio,
+    colorGrade: 'none',
+    creativity: 70,
+    preset: 'word-by-word',
+    fontA: 'Inter',
+    fontB: 'Playfair Display',
+    twoFonts: false,
+    background: '#101116',
+    foreground: '#ffffff',
+    accent: '#ffe043',
+    transparent: false,
+    seed: Math.floor(Math.random() * 1000),
+    videoSrc: '',
+    videoDuration: options.videoDuration ?? 10,
+    clips: [],
+    cues: [],
+    overlays: [],
+    fonts: [],
+    safeZone: true,
+    ...options
+  };
+}
 export type MotionOverlayType = 'kinetic-text' | 'stroke-path' | 'burst' | 'scene' | 'speed-lines' | 'camera-shake';
 export type Overlay = {id:string;kind:'shape'|'image'|'video'|'text'|'effect'|'audio'|'motion';name:string;start:number;end:number;track:number;x:number;y:number;scale:number;rotation:number;opacity:number;src?:string;text?:string;type?:'rectangle'|'circle'|'arrow'|'line'|'scribble'|'flash'|'grain'|'vignette'|'zoom-pulse';color?:string;strokeColor?:string;strokeWidth?:number;fontA?:string;fontWeight?:number;preset?:Preset;keyframes?:Keyframe[];volume?:number;sourceStart?:number;speed?:number;muted?:boolean;mediaRole?:'logo'|'broll';frameWidth?:number;frameHeight?:number;motionType?:MotionOverlayType;motionProps?:Record<string, any>;ducking?:boolean;duckingAmount?:number};
 export type FontItem = {name:string;src:string};

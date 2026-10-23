@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initialProject,parseSrt,normalizeWords,splitWords,validateProject,durationFrames,animatedValue,textTokens,applyStyleToCues,isCueStyleKey,LEFT_PANEL_MIN,LEFT_PANEL_MAX,RIGHT_PANEL_MIN,RIGHT_PANEL_MAX,computeInitialPanelWidths,type Cue} from '../src/lib/project.ts';
+import {initialProject,parseSrt,normalizeWords,splitWords,validateProject,durationFrames,animatedValue,textTokens,applyStyleToCues,isCueStyleKey,LEFT_PANEL_MIN,LEFT_PANEL_MAX,RIGHT_PANEL_MIN,RIGHT_PANEL_MAX,computeInitialPanelWidths,createBlankProject,detectAspectRatio,type Cue} from '../src/lib/project.ts';
 
 test('SRT preserves original timestamps',()=>{
  const s='1\n00:00:00,300 --> 00:00:01,800\nComente [BALEIA] agora\n\n2\n00:00:02,000 --> 00:00:03,750\nPara receber o link';
@@ -88,4 +88,40 @@ test('sidebar panels initialize at maximum expansion by default', ()=>{
  assert.ok(compact.right <= RIGHT_PANEL_MAX && compact.right >= RIGHT_PANEL_MIN);
  assert.ok(1280 - compact.left - compact.right - 14 >= 380);
 });
+
+test('detectAspectRatio recognizes common video proportions', () => {
+  assert.equal(detectAspectRatio(1920, 1080).ratio, '16:9');
+  assert.equal(detectAspectRatio(1280, 720).ratio, '16:9');
+  assert.equal(detectAspectRatio(1080, 1920).ratio, '9:16');
+  assert.equal(detectAspectRatio(720, 1280).ratio, '9:16');
+  assert.equal(detectAspectRatio(1080, 1080).ratio, '1:1');
+  assert.equal(detectAspectRatio(1080, 1350).ratio, '4:5');
+});
+
+test('createBlankProject starts with empty timeline and valid dimensions', () => {
+  const blank = createBlankProject('Projeto Limpo');
+  assert.equal(blank.name, 'Projeto Limpo');
+  assert.equal(blank.width, 1080);
+  assert.equal(blank.height, 1920);
+  assert.equal(blank.aspectRatio, '9:16');
+  assert.equal(blank.cues.length, 0);
+  assert.equal(blank.overlays.length, 0);
+  assert.equal(blank.clips.length, 0);
+
+  const p = createBlankProject('Meu Reel Novo', {
+    videoDuration: 15.5,
+    clips: [{ id: 'clip-1', src: '/video.mp4', start: 0, end: 15.5, sourceStart: 0, speed: 1, x: 50, y: 50, zoom: 1 }]
+  });
+
+  assert.equal(p.name, 'Meu Reel Novo');
+  assert.equal(p.width, 1080);
+  assert.equal(p.height, 1920);
+  assert.equal(p.aspectRatio, '9:16');
+  assert.equal(p.cues.length, 0);
+  assert.equal(p.overlays.length, 0);
+  assert.equal(p.clips.length, 1);
+  assert.equal(p.clips[0].end, 15.5);
+  assert.equal(durationFrames(p), Math.ceil(15.5 * p.fps));
+});
+
 
