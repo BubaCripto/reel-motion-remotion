@@ -444,6 +444,30 @@ export const EditPanel: React.FC<Props> = ({
                       <option value="hourglass">⏳ Ampulheta Geométrica com Areia</option>
                       <option value="speed-gauge">⚡ Velocímetro no Limite Vermelho</option>
                       <option value="neural-brain">🧠 Rede Neural com Pulsos de Luz</option>
+                      <option value="social-cta">♥ CTA social: curtir, salvar e seguir</option>
+                      <option value="social-comment">💬 Comentário / DM em destaque</option>
+                      <option value="metric-counter"># Contador de métrica / percentual</option>
+                      <option value="comparison">⇄ Comparação: antes × depois</option>
+                      <option value="checklist">✓ Checklist animado</option>
+                      <option value="progress-bar">▰ Barra de progresso</option>
+                      <option value="focus-spotlight">⌕ Foco / lupa / destaque</option>
+                      <option value="calendar-clock">⏱ Calendário / prazo / relógio</option>
+                      <option value="social-notification">🔔 Notificação social</option>
+                      <option value="social-profile">◉ Card de perfil social</option>
+                      <option value="search-bar">⌕ Barra de busca animada</option>
+                      <option value="cursor-click">➤ Cursor / clique guiado</option>
+                      <option value="glitch-rgb">▧ Glitch RGB</option>
+                      <option value="impact-flash">✦ Flash de impacto</option>
+                      <option value="crt-vhs">▤ CRT / VHS retrô</option>
+                      <option value="confetti">🎉 Confete de conquista</option>
+                      <option value="bar-chart">▥ Gráfico de barras</option>
+                      <option value="conversion-funnel">▽ Funil de conversão</option>
+                      <option value="ranking-podium">♛ Ranking / pódio</option>
+                      <option value="timeline-steps">— Linha do tempo</option>
+                      <option value="radar-scan">◉ Radar / mapa</option>
+                      <option value="domino-effect">▯ Efeito dominó</option>
+                      <option value="traffic-light">● Semáforo</option>
+                      <option value="balance-scale">⚖ Balança / escolha</option>
                     </select>
                   </label>
                   <label>

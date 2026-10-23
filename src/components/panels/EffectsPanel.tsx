@@ -1,5 +1,6 @@
 import React from 'react';
 import type {MotionOverlayType, Overlay} from '../../lib/project';
+import type {MotionSceneId} from '../../lib/motionCatalog';
 import {labelName} from '../../types/editor';
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
   onSetAddText: (t: string) => void;
   onAddOverlay: (kind: Overlay['kind'], type?: Overlay['type']) => void;
   onAddMotionOverlay?: (type: MotionOverlayType) => void;
+  onAddMotionScene?: (scene: MotionSceneId) => void;
   onPickImage: () => void;
   onInsertCue: () => void;
   onAnalyzeAudio: (file?: File) => void;
@@ -17,6 +19,7 @@ export const EffectsPanel: React.FC<Props> = ({
   onSetAddText,
   onAddOverlay,
   onAddMotionOverlay,
+  onAddMotionScene,
   onPickImage,
   onInsertCue,
   onAnalyzeAudio
@@ -67,6 +70,37 @@ export const EffectsPanel: React.FC<Props> = ({
               + 📳 Camera Shake
             </button>
           </div>
+          {onAddMotionScene && (
+            <>
+              <div className="sectionLine" style={{color: '#5eead4'}}>MOTIONS PARA REELS</div>
+              <div className="presetGrid actions">
+                <button onClick={() => onAddMotionScene('social-cta')}>+ ♥ CTA social</button>
+                <button onClick={() => onAddMotionScene('social-comment')}>+ 💬 Comentário / DM</button>
+                <button onClick={() => onAddMotionScene('metric-counter')}>+ # Contador</button>
+                <button onClick={() => onAddMotionScene('comparison')}>+ ⇄ Antes × Depois</button>
+                <button onClick={() => onAddMotionScene('checklist')}>+ ✓ Checklist</button>
+                <button onClick={() => onAddMotionScene('progress-bar')}>+ ▰ Progresso</button>
+                <button onClick={() => onAddMotionScene('focus-spotlight')}>+ ⌕ Foco / Lupa</button>
+                <button onClick={() => onAddMotionScene('calendar-clock')}>+ ⏱ Prazo / Tempo</button>
+                <button onClick={() => onAddMotionScene('social-notification')}>+ 🔔 Notificação</button>
+                <button onClick={() => onAddMotionScene('social-profile')}>+ ◉ Perfil social</button>
+                <button onClick={() => onAddMotionScene('search-bar')}>+ ⌕ Busca</button>
+                <button onClick={() => onAddMotionScene('cursor-click')}>+ ➤ Cursor / clique</button>
+                <button onClick={() => onAddMotionScene('glitch-rgb')}>+ ▧ Glitch RGB</button>
+                <button onClick={() => onAddMotionScene('impact-flash')}>+ ✦ Flash</button>
+                <button onClick={() => onAddMotionScene('crt-vhs')}>+ ▤ CRT / VHS</button>
+                <button onClick={() => onAddMotionScene('confetti')}>+ 🎉 Confete</button>
+                <button onClick={() => onAddMotionScene('bar-chart')}>+ ▥ Barras</button>
+                <button onClick={() => onAddMotionScene('conversion-funnel')}>+ ▽ Funil</button>
+                <button onClick={() => onAddMotionScene('ranking-podium')}>+ ♛ Ranking</button>
+                <button onClick={() => onAddMotionScene('timeline-steps')}>+ — Timeline</button>
+                <button onClick={() => onAddMotionScene('radar-scan')}>+ ◉ Radar</button>
+                <button onClick={() => onAddMotionScene('domino-effect')}>+ ▯ Dominó</button>
+                <button onClick={() => onAddMotionScene('traffic-light')}>+ ● Semáforo</button>
+                <button onClick={() => onAddMotionScene('balance-scale')}>+ ⚖ Balança</button>
+              </div>
+            </>
+          )}
         </>
       )}
 

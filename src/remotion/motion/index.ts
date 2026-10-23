@@ -11,4 +11,6 @@ export * from './scenes/HazardWarningScene';
 export * from './scenes/HourglassScene';
 export * from './scenes/SpeedGaugeScene';
 export * from './scenes/NeuralBrainScene';
+export * from './scenes/CreatorUtilityScenes';
+export * from './scenes/DataNarrativeScenes';
 export * from './AnalogTextureOverlay';

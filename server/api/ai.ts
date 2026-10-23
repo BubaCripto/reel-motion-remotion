@@ -2,7 +2,8 @@ import type {IncomingMessage,ServerResponse} from 'node:http';
 import {answer,base,collect} from '../common';
 import {analyzeRhythm} from '../rhythm';
 import {validateProject} from '../../src/lib/project';
-import {generateSemanticMotionBlueprint} from '../../src/lib/motionCompiler';
+import {generateSemanticMotionBlueprint, sanitizeDirectorBlueprint} from '../../src/lib/motionCompiler';
+import {MOTION_CATALOG_FOR_AI} from '../../src/lib/motionCatalog';
 
 export async function handleAiRhythm(req:IncomingMessage, res:ServerResponse): Promise<void> {
   const body = JSON.parse((await collect(req, 2 * 1024 * 1024)).toString());
@@ -239,7 +240,7 @@ export async function handleAiDirector(req: IncomingMessage, res: ServerResponse
           {
             role: 'system',
             content: `Você é um Diretor de Motion Design Sênior especializado em Reels de alto impacto viral (estilo After Effects, Vox, Ordinary Folk).
-PROIBIDO USAR CARDS ESTÁTICOS DE UI.
+Use somente motions que o editor realmente suporta. Não invente tipos, nomes de cena ou parâmetros.
 Gere uma coreografia de motion graphics frase por frase sincronizada aos timestamps.
 Retorne SOMENTE JSON rigoroso no formato:
 {
@@ -260,7 +261,7 @@ Retorne SOMENTE JSON rigoroso no formato:
       "motionProps": {
         "style"?: "3d-tilt"|"elastic-bounce"|"stagger-drop",
         "shape"?: "curved-arrow"|"scribble-circle"|"marker-underline"|"target-reticle",
-        "scene"?: "growth-graph"|"target-lock"|"rocket-launch"|"stamp-impact"|"hazard-warning"|"hourglass"|"speed-gauge"|"neural-brain",
+        "scene"?: "growth-graph"|"target-lock"|"rocket-launch"|"stamp-impact"|"hazard-warning"|"hourglass"|"speed-gauge"|"neural-brain"|"social-cta"|"social-comment"|"metric-counter"|"comparison"|"checklist"|"progress-bar"|"focus-spotlight"|"calendar-clock"|"social-notification"|"social-profile"|"search-bar"|"cursor-click"|"glitch-rgb"|"impact-flash"|"crt-vhs"|"confetti"|"bar-chart"|"conversion-funnel"|"ranking-podium"|"timeline-steps"|"radar-scan"|"domino-effect"|"traffic-light"|"balance-scale",
         "label"?: string,
         "metric"?: string,
         "accent"?: string
@@ -270,6 +271,7 @@ Retorne SOMENTE JSON rigoroso no formato:
   ],
   "soundDesign": [{"time": number, "sfx": string, "volume": number}]
 }
+Catálogo de cenas suportadas:\n${MOTION_CATALOG_FOR_AI}
 Mantenha os grafismos no topo (y: 25% a 45%) para nunca cobrir legendas ou o rosto do orador.`
           },
           {
@@ -285,15 +287,12 @@ Mantenha os grafismos no topo (y: 25% a 45%) para nunca cobrir legendas ou o ros
       const data = await r.json() as any;
       const raw = String(data?.choices?.[0]?.message?.content || '').replace(/^```json\s*|\s*```$/g, '');
       const value = JSON.parse(raw);
-      if (Array.isArray(value.motionLayers)) {
+      const blueprint = sanitizeDirectorBlueprint(value, style, intensity);
+      if (blueprint) {
         return answer(res, 200, {
           provider: 'ag-local-bridge',
           model,
-          blueprint: {
-            ...value,
-            style,
-            intensity
-          }
+          blueprint
         });
       }
     }

@@ -62,6 +62,7 @@ import {LibraryPanel} from './components/panels/LibraryPanel';
 import {AiReviewModal, type AiReviewSession, type AiCutItem} from './components/common/AiReviewModal';
 import {MotionReviewModal} from './components/common/MotionReviewModal';
 import {applyDirectorBlueprint, type DirectorBlueprint, type DirectorStyle, type DirectorIntensity} from './lib/motionCompiler';
+import type {MotionSceneId} from './lib/motionCatalog';
 import {useShortcuts} from './hooks/useShortcuts';
 import {builtinFonts, storage, kitsStore, type Selection, type Drag, type BrandKit} from './types/editor';
 
@@ -641,6 +642,53 @@ function ProjectStudio() {
           : type === 'camera-shake'
           ? {intensity: 16, decayFrames: 10}
           : {}
+    };
+    change({overlays: [...p.overlays, o]});
+    select({kind: 'overlay', id: o.id});
+    setPanel('edit');
+  };
+
+  const addMotionScene = (scene: MotionSceneId) => {
+    const sceneDefaults: Record<MotionSceneId, {name: string; label: string; metric?: string; subtext?: string; color?: string; y?: number}> = {
+      'growth-graph': {name: 'Gráfico de crescimento', label: 'RESULTADOS', metric: '+340%'},
+      'target-lock': {name: 'Mira de foco', label: 'FOCO PRINCIPAL'},
+      'rocket-launch': {name: 'Foguete CTA', label: 'SIGA PARA MAIS'},
+      'stamp-impact': {name: 'Carimbo de impacto', label: 'ATENÇÃO'},
+      'hazard-warning': {name: 'Alerta', label: 'EVITE ESTE ERRO'},
+      'hourglass': {name: 'Ampulheta', label: 'SEM TEMPO'},
+      'speed-gauge': {name: 'Velocímetro', label: 'ACELERE', metric: '10X'},
+      'neural-brain': {name: 'Rede neural', label: 'INSIGHT'},
+      'social-cta': {name: 'CTA social', label: 'SALVE ESTE REEL', subtext: 'PARA VER DE NOVO DEPOIS'},
+      'social-comment': {name: 'Comentário em destaque', label: 'DEIXE SEU COMENTÁRIO', subtext: 'QUAL É A SUA DÚVIDA?'},
+      'metric-counter': {name: 'Contador de métrica', label: 'RESULTADO', metric: '+340%'},
+      'comparison': {name: 'Antes × Depois', label: 'ANTES', metric: 'DEPOIS'},
+      'checklist': {name: 'Checklist animado', label: '3 PASSOS', subtext: 'GANCHO FORTE|CORTE RÁPIDO|CTA CLARO'},
+      'progress-bar': {name: 'Barra de progresso', label: 'PROGRESSO', metric: '80%'},
+      'focus-spotlight': {name: 'Foco / lupa', label: 'OLHE AQUI'},
+      'calendar-clock': {name: 'Prazo / relógio', label: 'COMECE HOJE', metric: '24H'}
+      ,'social-notification': {name: 'Notificação social', label: 'NOVO SEGUIDOR', subtext: 'veja agora', color: '#ff4f8b'},
+      'social-profile': {name: 'Perfil social', label: 'SEU PERFIL', metric: '10K', subtext: '@seuperfil', color: '#ff4f8b'},
+      'search-bar': {name: 'Busca animada', label: 'PESQUISE ISTO', color: '#00f0ff'},
+      'cursor-click': {name: 'Cursor e clique', label: 'CLIQUE AQUI', color: '#ffe043'},
+      'glitch-rgb': {name: 'Glitch RGB', label: 'NÃO COMETA ESTE ERRO', color: '#00f0ff'},
+      'impact-flash': {name: 'Flash de impacto', label: 'IMPACTO', color: '#ffffff'},
+      'crt-vhs': {name: 'CRT / VHS', label: 'NOVA FASE', color: '#00f0ff'},
+      'confetti': {name: 'Confete', label: 'META ATINGIDA', color: '#ffe043'}
+      ,'bar-chart': {name: 'Gráfico de barras', label: 'RESULTADOS', metric: '+84%'},
+      'conversion-funnel': {name: 'Funil de conversão', label: 'FUNIL DE VENDAS', metric: '12%'},
+      'ranking-podium': {name: 'Ranking / pódio', label: 'TOP 3', metric: 'PRIORIDADE MÁXIMA'},
+      'timeline-steps': {name: 'Linha do tempo', label: 'PLANO DE AÇÃO', subtext: 'COMEÇAR|AJUSTAR|CRESCER'},
+      'radar-scan': {name: 'Radar / mapa', label: 'OPORTUNIDADE', color: '#00f0ff'},
+      'domino-effect': {name: 'Efeito dominó', label: 'EFEITO DOMINÓ', metric: 'UMA AÇÃO GERA A PRÓXIMA'},
+      'traffic-light': {name: 'Semáforo', label: 'PARE E ANALISE'},
+      'balance-scale': {name: 'Balança', label: 'ESCOLHA CERTA', metric: 'EQUILÍBRIO'}
+    };
+    const preset = sceneDefaults[scene];
+    const o: Overlay = {
+      id: uid(), kind: 'motion', motionType: 'scene', name: preset.name, text: preset.label,
+      start: cursor, end: Math.max(cursor + .4, Math.min(duration, cursor + 2.5)), track: 3,
+      x: 50, y: preset.y ?? 33, scale: .9, rotation: 0, opacity: 1, color: preset.color ?? p.accent,
+      motionProps: {scene, label: preset.label, metric: preset.metric, subtext: preset.subtext}
     };
     change({overlays: [...p.overlays, o]});
     select({kind: 'overlay', id: o.id});
@@ -1768,6 +1816,7 @@ function ProjectStudio() {
               onSetAddText={setAddText}
               onAddOverlay={addOverlay}
               onAddMotionOverlay={addMotionOverlay}
+              onAddMotionScene={addMotionScene}
               onPickImage={() => pickerImage.current?.click()}
               onInsertCue={insertCue}
               onAnalyzeAudio={analyzeAudio}

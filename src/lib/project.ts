@@ -108,6 +108,53 @@ initialProject.overlays=[
  {id:'demo-grain',kind:'effect',type:'grain',name:'Grain',start:21.2,end:23.6,track:4,x:50,y:50,scale:1,rotation:0,opacity:1,color:'#ffffff'},
  {id:'demo-zoom',kind:'effect',type:'zoom-pulse',name:'Zoom pulse',start:23.8,end:26.2,track:4,x:50,y:50,scale:1,rotation:0,opacity:1,color:'#ffffff'}
 ];
+
+/** The new-project demo is deliberately long: each supported motion gets an editable timeline block. */
+const DEMO_MOTION_SCENES = [
+ ['growth-graph','Gráfico de crescimento','RESULTADOS','+340%'],
+ ['target-lock','Mira de foco','FOCO PRINCIPAL',''],
+ ['rocket-launch','Foguete CTA','SIGA PARA MAIS',''],
+ ['stamp-impact','Carimbo de impacto','NÃO FAÇA ISSO','ERRO GRAVE'],
+ ['hazard-warning','Alerta','ATENÇÃO','PONTO CRÍTICO'],
+ ['hourglass','Ampulheta','TEMPO É DINHEIRO',''],
+ ['speed-gauge','Velocímetro','ACELERE','10X'],
+ ['neural-brain','Rede neural','INSIGHT','ESTRATÉGIA'],
+ ['social-cta','CTA social','SALVE ESTE REEL','PARA VER DE NOVO'],
+ ['social-comment','Comentário social','DEIXE UM COMENTÁRIO','QUAL SUA DÚVIDA?'],
+ ['metric-counter','Contador de métrica','RESULTADO','+340%'],
+ ['comparison','Comparação','ANTES','DEPOIS'],
+ ['checklist','Checklist','3 PASSOS','GANCHO|CORTE|CTA'],
+ ['progress-bar','Barra de progresso','PROGRESSO','80%'],
+ ['focus-spotlight','Foco / lupa','OLHE AQUI',''],
+ ['calendar-clock','Relógio e prazo','COMECE HOJE','24H'],
+ ['social-notification','Notificação social','NOVO SEGUIDOR','VEJA AGORA'],
+ ['social-profile','Perfil social','SEU PERFIL','@SEUPERFIL'],
+ ['search-bar','Busca animada','PESQUISE ISTO',''],
+ ['cursor-click','Cursor / clique','CLIQUE AQUI',''],
+ ['glitch-rgb','Glitch RGB','QUEBRE O PADRÃO',''],
+ ['impact-flash','Flash de impacto','IMPACTO',''],
+ ['crt-vhs','CRT / VHS','NOVA FASE',''],
+ ['confetti','Confete','META ATINGIDA',''],
+ ['bar-chart','Gráfico de barras','RESULTADOS','+84%'],
+ ['conversion-funnel','Funil de conversão','FUNIL DE VENDAS','12%'],
+ ['ranking-podium','Ranking / pódio','TOP 3','PRIORIDADE'],
+ ['timeline-steps','Linha do tempo','PLANO DE AÇÃO','COMEÇAR|AJUSTAR|CRESCER'],
+ ['radar-scan','Radar / mapa','OPORTUNIDADE',''],
+ ['domino-effect','Efeito dominó','EFEITO DOMINÓ','AÇÃO GERA AÇÃO'],
+ ['traffic-light','Semáforo','PARE E ANALISE',''],
+ ['balance-scale','Balança','ESCOLHA CERTA','EQUILÍBRIO']
+] as const;
+
+initialProject.overlays.push(...DEMO_MOTION_SCENES.map(([scene,name,label,metric],index)=>{
+ const start=28+index*2.6;
+ return {
+  id:`demo-motion-${scene}`,kind:'motion' as const,motionType:'scene' as const,name:`Motion · ${name}`,
+  text:label,start,end:start+2.35,track:3,x:50,y:scene==='focus-spotlight'?43:33,scale:scene==='impact-flash'||scene==='crt-vhs'?1:.82,
+  rotation:0,opacity:1,color:['#ffe043','#2edbf0','#ff6b9e','#31e981'][index%4],
+  motionProps:{scene,label,metric,subtext:metric}
+ };
+}));
+initialProject.videoDuration=Math.max(initialProject.videoDuration||0,...initialProject.overlays.map(o=>o.end));
 export const clone=<T,>(v:T):T=>JSON.parse(JSON.stringify(v));
 export function uid(){return (typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():'id-'+Math.random().toString(36).slice(2);}
 export function durationFrames(p:ReelProject){return Math.max(30,Math.ceil(Math.max(1,p.videoDuration||0,...p.cues.map(c=>c.end),...(p.clips||[]).map(c=>c.end),...(p.overlays||[]).map(c=>c.end))*p.fps));}

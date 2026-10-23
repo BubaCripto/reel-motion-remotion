@@ -4,6 +4,7 @@ import { initialProject, type Cue } from '../src/lib/project.ts';
 import {
   generateSemanticMotionBlueprint,
   applyDirectorBlueprint,
+  sanitizeDirectorBlueprint,
   type DirectorBlueprint
 } from '../src/lib/motionCompiler.ts';
 
@@ -29,6 +30,22 @@ test('generateSemanticMotionBlueprint produces hook, semantic scenes and CTA', (
 
   assert.ok(sceneTypes.includes('growth-graph'));
   assert.ok(sceneTypes.includes('rocket-launch')); // CTA
+});
+
+test('external AI blueprint only retains supported motions and scenes', () => {
+  const result = sanitizeDirectorBlueprint({
+    directorVision: 'test',
+    motionLayers: [
+      {id: 'valid', type: 'scene', name: 'CTA', start: 1, end: 3, x: 50, y: 30, scale: 1, motionProps: {scene: 'social-cta'}},
+      {id: 'unknown-scene', type: 'scene', name: 'Invented', start: 3, end: 5, x: 50, y: 30, scale: 1, motionProps: {scene: 'made-up-effect'}},
+      {id: 'unknown-type', type: 'teleport', name: 'Invalid', start: 5, end: 7, x: 50, y: 30, scale: 1, motionProps: {}}
+    ]
+  }, 'viral-after-effects', 'balanced');
+
+  assert.ok(result);
+  assert.equal(result.motionLayers.length, 2);
+  assert.equal(result.motionLayers[0].motionProps.scene, 'social-cta');
+  assert.equal(result.motionLayers[1].motionProps.scene, 'growth-graph');
 });
 
 test('generateSemanticMotionBlueprint respects intensity levels', () => {

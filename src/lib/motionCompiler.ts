@@ -1,4 +1,5 @@
 import { uid, type Cue, type Overlay, type ReelProject, type TransitionType } from './project.ts';
+import {isMotionSceneId} from './motionCatalog.ts';
 
 export type DirectorStyle = 'viral-after-effects' | 'cyber-tech' | 'minimalist-editorial';
 export type DirectorIntensity = 'subtle' | 'balanced' | 'aggressive';
@@ -32,6 +33,34 @@ export interface DirectorBlueprint {
   cameraPunches: Array<{ time: number; scale: number; transition?: TransitionType; reason?: string }>;
   motionLayers: DirectorMotionItem[];
   soundDesign: DirectorSfxItem[];
+}
+
+const supportedMotionTypes = new Set<DirectorMotionItem['type']>(['kinetic-text', 'stroke-path', 'burst', 'scene', 'speed-lines', 'camera-shake']);
+
+/** Reject hallucinated layer kinds/scenes returned by an external model before they reach the Player. */
+export function sanitizeDirectorBlueprint(value: unknown, style: DirectorStyle, intensity: DirectorIntensity): DirectorBlueprint | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Partial<DirectorBlueprint>;
+  if (!Array.isArray(raw.motionLayers)) return null;
+  const motionLayers = raw.motionLayers.flatMap((item: any): DirectorMotionItem[] => {
+    if (!item || !supportedMotionTypes.has(item.type) || !Number.isFinite(Number(item.start)) || !Number.isFinite(Number(item.end)) || Number(item.end) <= Number(item.start)) return [];
+    const motionProps = typeof item.motionProps === 'object' && item.motionProps ? {...item.motionProps} : {};
+    if (item.type === 'scene' && !isMotionSceneId(motionProps.scene)) motionProps.scene = 'growth-graph';
+    return [{
+      id: typeof item.id === 'string' ? item.id : uid(), type: item.type, name: String(item.name || 'Motion gerado'),
+      start: Math.max(0, Number(item.start)), end: Math.max(0.1, Number(item.end)),
+      x: Math.max(0, Math.min(100, Number(item.x) || 50)), y: Math.max(0, Math.min(100, Number(item.y) || 35)),
+      scale: Math.max(.2, Math.min(3, Number(item.scale) || 1)), rotation: Number(item.rotation) || 0,
+      color: typeof item.color === 'string' ? item.color : '#ffe043', text: typeof item.text === 'string' ? item.text : '', motionProps,
+      sfx: typeof item.sfx === 'string' ? item.sfx : undefined
+    }];
+  });
+  if (!motionLayers.length) return null;
+  return {
+    directorVision: String(raw.directorVision || `Direção com ${motionLayers.length} motions suportados.`), style, intensity, motionLayers,
+    cameraPunches: Array.isArray(raw.cameraPunches) ? raw.cameraPunches.filter((p: any) => p && Number.isFinite(Number(p.time))).map((p: any) => ({time: Number(p.time), scale: Number(p.scale) || 1, transition: p.transition, reason: String(p.reason || '')})) : [],
+    soundDesign: Array.isArray(raw.soundDesign) ? raw.soundDesign.filter((s: any) => s && Number.isFinite(Number(s.time)) && typeof s.sfx === 'string').map((s: any) => ({time: Number(s.time), sfx: s.sfx, volume: Math.max(0, Math.min(1, Number(s.volume) || .7))})) : []
+  };
 }
 
 const SFX_FILES: Record<string, string> = {
@@ -147,6 +176,52 @@ export function generateSemanticMotionBlueprint(
       });
       sfxList.push({ time: cue.start, sfx: 'coin-ding', volume: 0.85 });
       lastMotionTime = end;
+    } else if (/(funil|conversão|etapa de venda|jornada)/i.test(lower)) {
+      motions.push({id:uid(),type:'scene',name:'Funil de Conversão',start:cue.start,end,x:50,y:34,scale:.85,color:styleColors.primary,text:cue.text,motionProps:{scene:'conversion-funnel',label:'FUNIL DE CONVERSÃO',metric:'12%',subtext:cue.text},sfx:'whoosh-fast'});
+      sfxList.push({time:cue.start,sfx:'whoosh-fast',volume:.6}); lastMotionTime=end;
+    } else if (/(ranking|primeiro lugar|top 3|melhor opção|prioridade)/i.test(lower)) {
+      motions.push({id:uid(),type:'scene',name:'Ranking de Prioridade',start:cue.start,end,x:50,y:34,scale:.85,color:styleColors.primary,text:cue.text,motionProps:{scene:'ranking-podium',label:'TOP PRIORIDADES',metric:cue.text},sfx:'coin-ding'});
+      sfxList.push({time:cue.start,sfx:'coin-ding',volume:.7}); lastMotionTime=end;
+    } else if (/(cronograma|linha do tempo|passo a passo|primeiro.*depois|plano)/i.test(lower)) {
+      motions.push({id:uid(),type:'scene',name:'Linha do Tempo',start:cue.start,end,x:50,y:35,scale:.8,color:styleColors.primary,text:cue.text,motionProps:{scene:'timeline-steps',label:'PASSO A PASSO',subtext:'COMEÇAR|AJUSTAR|CRESCER'},sfx:'whoosh-fast'});
+      sfxList.push({time:cue.start,sfx:'whoosh-fast',volume:.55}); lastMotionTime=end;
+    } else if (/(local|onde|mapa|encontrar|oportunidade|monitor)/i.test(lower)) {
+      motions.push({id:uid(),type:'scene',name:'Radar de Oportunidade',start:cue.start,end,x:50,y:33,scale:.82,color:styleColors.accent,text:cue.text,motionProps:{scene:'radar-scan',label:'OPORTUNIDADE'},sfx:'camera-click'});
+      sfxList.push({time:cue.start,sfx:'camera-click',volume:.6}); lastMotionTime=end;
+    } else if (/(cadeia|dominó|consequência|efeito.*gera)/i.test(lower)) {
+      motions.push({id:uid(),type:'scene',name:'Efeito Dominó',start:cue.start,end,x:50,y:36,scale:.8,color:styleColors.primary,text:cue.text,motionProps:{scene:'domino-effect',label:'EFEITO DOMINÓ',metric:cue.text},sfx:'impact-boom'});
+      sfxList.push({time:cue.start,sfx:'impact-boom',volume:.7}); lastMotionTime=end;
+    } else if (/(pare|vá|avance|sinal verde|atenção)/i.test(lower)) {
+      motions.push({id:uid(),type:'scene',name:'Semáforo de Decisão',start:cue.start,end,x:50,y:34,scale:.76,color:styleColors.primary,text:cue.text,motionProps:{scene:'traffic-light',label:'PARE E ANALISE'},sfx:'camera-click'});
+      sfxList.push({time:cue.start,sfx:'camera-click',volume:.6}); lastMotionTime=end;
+    } else if (/(parabéns|conquista|atingiu|vitória|meta batida|conseguiu)/i.test(lower)) {
+      motions.push({id: uid(), type: 'scene', name: 'Confete de Conquista', start: cue.start, end, x: 50, y: 36, scale: .9, color: styleColors.primary, text: cue.text, motionProps: {scene: 'confetti', label: 'META ATINGIDA'}, sfx: 'pop-clean'});
+      sfxList.push({time: cue.start, sfx: 'pop-clean', volume: .75}); lastMotionTime = end;
+    } else if (/(notificação|mensagem nova|novo seguidor|curtida)/i.test(lower)) {
+      motions.push({id: uid(), type: 'scene', name: 'Notificação Social', start: cue.start, end, x: 50, y: 31, scale: .85, color: '#ff4f8b', text: cue.text, motionProps: {scene: 'social-notification', label: 'NOVA NOTIFICAÇÃO', subtext: cue.text}, sfx: 'pop-clean'});
+      sfxList.push({time: cue.start, sfx: 'pop-clean', volume: .65}); lastMotionTime = end;
+    } else if (/(pesquise|procure|busque|digite)/i.test(lower)) {
+      motions.push({id: uid(), type: 'scene', name: 'Busca Animada', start: cue.start, end, x: 50, y: 31, scale: .86, color: styleColors.accent, text: cue.text, motionProps: {scene: 'search-bar', label: cue.text.slice(0, 44)}, sfx: 'whoosh-fast'});
+      sfxList.push({time: cue.start, sfx: 'whoosh-fast', volume: .55}); lastMotionTime = end;
+    } else if (/(clique|botão|toque|aperta)/i.test(lower)) {
+      motions.push({id: uid(), type: 'scene', name: 'Cursor de Clique', start: cue.start, end, x: 50, y: 35, scale: .9, color: styleColors.primary, text: cue.text, motionProps: {scene: 'cursor-click', label: 'CLIQUE AQUI'}, sfx: 'camera-click'});
+      sfxList.push({time: cue.start, sfx: 'camera-click', volume: .65}); lastMotionTime = end;
+    } else if (/(seguir|segue|curte|curtir|salva|salvar|compartilha|envia|comenta|comentário)/i.test(lower)) {
+      motions.push({id: uid(), type: 'scene', name: 'CTA Social de Retenção', start: cue.start, end, x: 50, y: 31, scale: .9, color: styleColors.primary, text: cue.text, motionProps: {scene: /coment/i.test(lower) ? 'social-comment' : 'social-cta', label: /coment/i.test(lower) ? 'DEIXE SEU COMENTÁRIO' : 'SALVE ESTE REEL', subtext: 'PARA VER DE NOVO DEPOIS'}, sfx: 'pop-clean'});
+      sfxList.push({time: cue.start, sfx: 'pop-clean', volume: .7}); lastMotionTime = end;
+    } else if (/(passo|etapa|primeiro|segundo|terceiro|lista|checklist)/i.test(lower)) {
+      motions.push({id: uid(), type: 'scene', name: 'Checklist de Passos', start: cue.start, end, x: 50, y: 32, scale: .88, color: styleColors.primary, text: cue.text, motionProps: {scene: 'checklist', label: 'PASSOS IMPORTANTES', subtext: cue.text.replace(/[.!?]/g, '').split(/,| e /i).slice(0, 3).join('|')}, sfx: 'pop-clean'});
+      sfxList.push({time: cue.start, sfx: 'pop-clean', volume: .6}); lastMotionTime = end;
+    } else if (/(antes|depois|versus|vs\.?|compar)/i.test(lower)) {
+      motions.push({id: uid(), type: 'scene', name: 'Comparação Visual', start: cue.start, end, x: 50, y: 34, scale: .85, color: '#31e981', text: cue.text, motionProps: {scene: 'comparison', label: 'ANTES', metric: 'DEPOIS', subtext: cue.text}, sfx: 'whoosh-fast'});
+      sfxList.push({time: cue.start, sfx: 'whoosh-fast', volume: .65}); lastMotionTime = end;
+    } else if (/(\d+%|por cento|meta|número|mil|milhão|dados?)/i.test(lower)) {
+      const metric = cue.text.match(/\d+(?:[.,]\d+)?\s*%?/)?.[0] || '+100%';
+      motions.push({id: uid(), type: 'scene', name: 'Contador de Métrica', start: cue.start, end, x: 50, y: 33, scale: .9, color: styleColors.accent, text: cue.text, motionProps: {scene: 'metric-counter', label: 'RESULTADO', metric, subtext: cue.text}, sfx: 'coin-ding'});
+      sfxList.push({time: cue.start, sfx: 'coin-ding', volume: .75}); lastMotionTime = end;
+    } else if (/(foco|olha|veja|atenção|importante|aqui)/i.test(lower)) {
+      motions.push({id: uid(), type: 'scene', name: 'Spotlight de Foco', start: cue.start, end, x: 50, y: 36, scale: .82, color: styleColors.primary, text: cue.text, motionProps: {scene: 'focus-spotlight', label: cue.text.slice(0, 40)}, sfx: 'camera-click'});
+      sfxList.push({time: cue.start, sfx: 'camera-click', volume: .65}); lastMotionTime = end;
     } else if (/(nunca|erro|cuidado|pare|pior|proibid|não|alerta)/i.test(lower)) {
       motions.push({
         id: uid(),

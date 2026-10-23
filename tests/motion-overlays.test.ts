@@ -1,6 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialProject, validateProject, durationFrames, type Overlay } from '../src/lib/project.ts';
+import { motionSceneIds } from '../src/lib/motionCatalog.ts';
+
+test('complete demo contains every registered motion scene on the dedicated motion track', () => {
+  const demoScenes = initialProject.overlays
+    .filter(layer => layer.kind === 'motion' && layer.motionType === 'scene')
+    .map(layer => layer.motionProps?.scene);
+
+  assert.equal(demoScenes.length, motionSceneIds.length);
+  assert.deepEqual([...demoScenes].sort(), [...motionSceneIds].sort());
+  assert.ok(initialProject.overlays.filter(layer => layer.kind === 'motion').every(layer => layer.track === 3));
+});
 
 test('validateProject accepts and preserves motion overlays', () => {
   const motionLayer: Overlay = {

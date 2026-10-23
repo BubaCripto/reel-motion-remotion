@@ -15,6 +15,14 @@ import {
   HourglassScene,
   SpeedGaugeScene,
   NeuralBrainScene,
+  SocialCtaScene,
+  MetricCounterScene,
+  ComparisonScene,
+  ChecklistScene,
+  ProgressFocusScene,
+  SocialUiScene,
+  ImpactFxScene,
+  DataNarrativeScene,
   AnalogTextureOverlay
 } from './motion';
 import {loadFont as loadAnton} from '@remotion/google-fonts/Anton';
@@ -174,6 +182,30 @@ const OverlayView:React.FC<{layer:Overlay;cues?:Cue[]}>=({layer:l,cues})=>{
      case 'hourglass':content=<HourglassScene label={props.label} color={l.color||props.color} fps={fps} frame={frame}/>;break;
      case 'speed-gauge':content=<SpeedGaugeScene label={props.label} speedText={props.speedText} color={l.color||props.color} fps={fps} frame={frame}/>;break;
      case 'neural-brain':content=<NeuralBrainScene label={props.label} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'social-cta':content=<SocialCtaScene label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'social-comment':content=<SocialCtaScene variant="comment" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'metric-counter':content=<MetricCounterScene label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'comparison':content=<ComparisonScene label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'checklist':content=<ChecklistScene label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'progress-bar':content=<ProgressFocusScene variant="progress" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'focus-spotlight':content=<ProgressFocusScene variant="focus" label={props.label||l.text} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'calendar-clock':content=<ProgressFocusScene variant="time" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'social-notification':content=<SocialUiScene variant="notification" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'social-profile':content=<SocialUiScene variant="profile" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'search-bar':content=<SocialUiScene variant="search" label={props.label||l.text} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'cursor-click':content=<SocialUiScene variant="cursor" label={props.label||l.text} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'glitch-rgb':content=<ImpactFxScene variant="glitch" label={props.label||l.text} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'impact-flash':content=<ImpactFxScene variant="flash" label={props.label||l.text} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'crt-vhs':content=<ImpactFxScene variant="crt" label={props.label||l.text} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'confetti':content=<ImpactFxScene variant="confetti" label={props.label||l.text} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'bar-chart':content=<DataNarrativeScene variant="bars" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'conversion-funnel':content=<DataNarrativeScene variant="funnel" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'ranking-podium':content=<DataNarrativeScene variant="ranking" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'timeline-steps':content=<DataNarrativeScene variant="timeline" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'radar-scan':content=<DataNarrativeScene variant="radar" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'domino-effect':content=<DataNarrativeScene variant="domino" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'traffic-light':content=<DataNarrativeScene variant="traffic" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
+     case 'balance-scale':content=<DataNarrativeScene variant="balance" label={props.label||l.text} metric={props.metric} subtext={props.subtext} color={l.color||props.color} fps={fps} frame={frame}/>;break;
      default:content=<GrowthGraphScene label={props.label} metric={props.metric} color={l.color||props.color} fps={fps} frame={frame}/>;break;
     }
     break;
