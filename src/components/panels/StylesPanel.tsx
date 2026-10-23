@@ -10,6 +10,7 @@ type Props = {
   applyToAllSelected: boolean;
   onSetApplyToAllSelected: (v: boolean) => void;
   onSelectPreset: (preset: Preset) => void;
+  onAddStyledCue: (preset: Preset) => void;
   onChangeProject: (patch: Partial<ReelProject>, undo?: boolean) => void;
   kitName: string;
   onSetKitName: (name: string) => void;
@@ -25,6 +26,7 @@ export const StylesPanel: React.FC<Props> = ({
   applyToAllSelected,
   onSetApplyToAllSelected,
   onSelectPreset,
+  onAddStyledCue,
   onChangeProject,
   kitName,
   onSetKitName,
@@ -50,6 +52,13 @@ export const StylesPanel: React.FC<Props> = ({
           Aplicar a todas as {selectedCueIds.length} legendas selecionadas
         </label>
       )}
+      <button
+        className="accentBtn"
+        onClick={() => onAddStyledCue(cue?.preset ?? p.preset)}
+      >
+        + Adicionar “{labelName(cue?.preset ?? p.preset)}” na timeline
+      </button>
+      <p className="help">Cria um texto manual editável no playhead, usando o estilo selecionado. Não depende da IA.</p>
       {categories.map(cat => (
         <div key={cat.title}>
           <div className="sectionLine">{cat.title}</div>

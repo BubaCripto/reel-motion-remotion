@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import type {IncomingMessage,ServerResponse} from 'node:http';
 import {answer,base,collect,jobs,renderDir,run,type Job} from '../common';
 import {prepareRenderFrameRate} from '../media-info.mjs';
+import {isRenderableAsset} from '../render-assets';
 
 export async function handleRender(req:IncomingMessage, res:ServerResponse): Promise<void> {
   const body = JSON.parse((await collect(req, 8 * 1024 * 1024)).toString());
@@ -12,9 +13,9 @@ export async function handleRender(req:IncomingMessage, res:ServerResponse): Pro
     return answer(res, 400, {error: 'Projeto incompleto'});
   }
   const refs = [p.videoSrc, ...p.clips.map((c:any) => c.src), ...p.overlays.map((o:any) => o.src), ...p.fonts.map((f:any) => f.src)].filter(Boolean);
-  const allowedDemoAudio = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAAAAAA==';
-  if (refs.some((s:any) => typeof s !== 'string' || (!/^\/media\/[a-z0-9-]+\.[a-z0-9]+$/i.test(s) && s !== '/demo-grid.svg' && s !== allowedDemoAudio))) {
-    return answer(res, 400, {error: 'Importe todos os arquivos de mídia pelo editor antes de renderizar'});
+  const unavailable = refs.filter((src:any) => !isRenderableAsset(src, base));
+  if (unavailable.length) {
+    return answer(res, 400, {error: `Mídia indisponível para renderizar: ${unavailable.slice(0, 3).join(', ')}. Reimporte somente esses arquivos pelo editor.`});
   }
   try {
     p = await prepareRenderFrameRate(p, base);

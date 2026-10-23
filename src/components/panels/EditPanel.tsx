@@ -4,6 +4,26 @@ import {clamp,isTranscript,splitWords,seconds} from '../../lib/project';
 import {InputNumber,colorField} from '../common/InputNumber';
 import {categories,labelName,type Selection} from '../../types/editor';
 
+type MotionTextField = {key: 'label'|'metric'|'subtext'|'coordinates'|'speedText'|'text'; label: string; placeholder: string; multiline?: boolean};
+const sceneTextFields = (scene: string): MotionTextField[] => {
+  switch (scene) {
+    case 'comparison': return [{key:'label',label:'Texto do lado esquerdo',placeholder:'Ex.: ANTES'},{key:'metric',label:'Texto do lado direito',placeholder:'Ex.: DEPOIS'},{key:'subtext',label:'Texto de apoio',placeholder:'Ex.: o que mudou?'}];
+    case 'checklist': return [{key:'label',label:'Título do checklist',placeholder:'Ex.: 3 PASSOS'},{key:'subtext',label:'Itens (separe com |)',placeholder:'GANCHO FORTE|CORTE RÁPIDO|CTA CLARO',multiline:true}];
+    case 'timeline-steps': return [{key:'label',label:'Título da linha do tempo',placeholder:'Ex.: PLANO DE AÇÃO'},{key:'subtext',label:'Etapas (separe com |)',placeholder:'COMEÇAR|AJUSTAR|CRESCER',multiline:true}];
+    case 'social-profile': return [{key:'label',label:'Nome do perfil',placeholder:'Ex.: SUA MARCA'},{key:'subtext',label:'@usuário / descrição',placeholder:'@seuperfil'},{key:'metric',label:'Seguidores / prova social',placeholder:'Ex.: 10K'}];
+    case 'social-cta': return [{key:'label',label:'Chamada para ação',placeholder:'Ex.: SALVE ESTE REEL'},{key:'subtext',label:'Texto de apoio',placeholder:'Ex.: PARA VER DE NOVO'}];
+    case 'social-comment': return [{key:'label',label:'Texto do comentário',placeholder:'Ex.: DEIXE UM COMENTÁRIO'},{key:'subtext',label:'Pergunta / apoio',placeholder:'Ex.: QUAL A SUA DÚVIDA?'}];
+    case 'social-notification': return [{key:'label',label:'Título da notificação',placeholder:'Ex.: NOVO SEGUIDOR'},{key:'subtext',label:'Mensagem da notificação',placeholder:'Ex.: veja agora'}];
+    case 'target-lock': return [{key:'label',label:'Rótulo de foco',placeholder:'Ex.: FOCO PRINCIPAL'},{key:'coordinates',label:'Coordenadas / detalhe HUD',placeholder:'Ex.: HUD [4K] TARGET'}];
+    case 'speed-gauge': return [{key:'label',label:'Rótulo',placeholder:'Ex.: ACELERAÇÃO'},{key:'speedText',label:'Velocidade / métrica',placeholder:'Ex.: 10X'}];
+    case 'stamp-impact': return [{key:'text',label:'Texto do carimbo',placeholder:'Ex.: NÃO FAÇA ISSO'},{key:'subtext',label:'Texto de apoio',placeholder:'Ex.: ERRO GRAVE'}];
+    case 'search-bar': return [{key:'label',label:'Texto da busca',placeholder:'Ex.: PESQUISE ISTO'}];
+    case 'cursor-click': return [{key:'label',label:'Texto do botão',placeholder:'Ex.: CLIQUE AQUI'}];
+    case 'metric-counter': return [{key:'label',label:'Rótulo da métrica',placeholder:'Ex.: RESULTADO'},{key:'metric',label:'Número / percentual',placeholder:'Ex.: +340%'},{key:'subtext',label:'Texto de apoio',placeholder:'Ex.: EM POUCOS PASSOS'}];
+    default: return [{key:'label',label:'Rótulo / título',placeholder:'Texto principal'},{key:'metric',label:'Métrica / detalhe',placeholder:'Ex.: +340% ou texto auxiliar'},{key:'subtext',label:'Texto complementar',placeholder:'Opcional'}];
+  }
+};
+
 type Props = {
   project: ReelProject;
   selected: Selection | null;
@@ -470,45 +490,17 @@ export const EditPanel: React.FC<Props> = ({
                       <option value="balance-scale">⚖ Balança / escolha</option>
                     </select>
                   </label>
-                  <label>
-                    Rótulo / Título da Cena
-                    <input
-                      value={overlay.motionProps?.label ?? overlay.motionProps?.text ?? overlay.text ?? ''}
-                      onChange={e =>
-                        onEditLayer(overlay.id, {
-                          text: e.target.value,
-                          motionProps: {
-                            ...(overlay.motionProps || {}),
-                            label: e.target.value,
-                            text: e.target.value
-                          }
-                        })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Métrica / Subtexto
-                    <input
-                      value={
-                        overlay.motionProps?.metric ??
-                        overlay.motionProps?.subtext ??
-                        overlay.motionProps?.speedText ??
-                        overlay.motionProps?.coordinates ??
-                        ''
-                      }
-                      onChange={e =>
-                        onEditLayer(overlay.id, {
-                          motionProps: {
-                            ...(overlay.motionProps || {}),
-                            metric: e.target.value,
-                            subtext: e.target.value,
-                            speedText: e.target.value,
-                            coordinates: e.target.value
-                          }
-                        })
-                      }
-                    />
-                  </label>
+                  {sceneTextFields(String(overlay.motionProps?.scene || 'growth-graph')).map(field => {
+                    const value = String(overlay.motionProps?.[field.key] ?? (field.key === 'label' ? overlay.text ?? '' : ''));
+                    const update = (next: string) => onEditLayer(overlay.id, {
+                      ...(field.key === 'label' || field.key === 'text' ? {text: next} : {}),
+                      motionProps: {...(overlay.motionProps || {}), [field.key]: next}
+                    });
+                    return <label key={field.key}>
+                      {field.label}
+                      {field.multiline ? <textarea rows={2} value={value} placeholder={field.placeholder} onChange={e => update(e.target.value)} /> : <input value={value} placeholder={field.placeholder} onChange={e => update(e.target.value)} />}
+                    </label>;
+                  })}
                 </>
               )}
 

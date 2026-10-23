@@ -576,6 +576,16 @@ function ProjectStudio() {
     setPanel('edit');
   };
 
+  const insertStyledCue = (preset: Preset) => {
+    const c: Cue = {
+      id: uid(), text: 'SEU TEXTO', source: 'manual', start: cursor,
+      end: Math.min(duration + 2, cursor + 2.5), x: 50, y: 70, track: 1, preset
+    };
+    change({cues: [...p.cues, c]});
+    select({kind: 'cue', id: c.id});
+    setPanel('edit');
+  };
+
   const addOverlay = (kind: Overlay['kind'], type?: Overlay['type']) => {
     const o: Overlay = {
       id: uid(),
@@ -1801,6 +1811,7 @@ function ProjectStudio() {
                 if (cue) editCue(cue.id, {preset: pr});
                 else change({preset: pr});
               }}
+              onAddStyledCue={insertStyledCue}
               onChangeProject={change}
               kitName={kitName}
               onSetKitName={setKitName}
